@@ -472,7 +472,7 @@ function directionTrace(x, series, color, step = 1) {
   }
   return {
     x: arrowX,
-    y: arrowX.map(() => 0.9),
+    y: arrowX.map(() => 0.5),
     customdata,
     type: "scatter",
     mode: "markers",
@@ -531,6 +531,35 @@ function dayShapes(timestamps, mode) {
     });
   });
   return shapes;
+}
+
+function directionShapes() {
+  const rect = {
+    type: "rect",
+    xref: "paper",
+    yref: "y2",
+    x0: 0,
+    x1: 1,
+    y0: 0,
+    y1: 1,
+    line: { width: 0 },
+    layer: "below",
+  };
+  return [
+    { ...rect, fillcolor: "#1e293b" },
+    { ...rect, fillcolor: "rgba(148, 163, 184, 0.18)" },
+    {
+      type: "line",
+      xref: "paper",
+      yref: "y2",
+      x0: 0,
+      x1: 1,
+      y0: 0,
+      y1: 0,
+      line: { color: "rgba(148, 163, 184, 0.4)", width: 1 },
+      layer: "below",
+    },
+  ];
 }
 
 function extractXRange(eventData, el) {
@@ -655,7 +684,7 @@ function renderChart(param, block, series) {
     plot_bgcolor: "rgba(0,0,0,0)",
     font: { color: "#cbd5e1" },
     margin: { l: 54, r: secondaryUnit !== null || hasDirection ? 48 : 18, t: 42, b: 46 },
-    height: 300,
+    height: 320,
     showlegend: true,
     legend: { orientation: "h", x: 0.5, xanchor: "center", y: 1.0, yanchor: "bottom" },
     xaxis: {
@@ -673,8 +702,13 @@ function renderChart(param, block, series) {
       title: { text: series.unit || "" },
       rangemode: param.zero ? "tozero" : "normal",
     },
-    shapes: dayShapes(timestamps, state.mode),
+    shapes: hasDirection
+      ? [...dayShapes(timestamps, state.mode), ...directionShapes()]
+      : dayShapes(timestamps, state.mode),
   };
+  if (hasDirection) {
+    layout.yaxis.domain = [0, 0.86];
+  }
   if (xRange) {
     layout.xaxis.range = xRange;
   }
@@ -690,8 +724,8 @@ function renderChart(param, block, series) {
     };
   } else if (hasDirection) {
     layout.yaxis2 = {
-      overlaying: "y",
-      side: "right",
+      anchor: "x",
+      domain: [0.88, 1],
       showgrid: false,
       showticklabels: false,
       zeroline: false,
