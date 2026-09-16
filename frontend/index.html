@@ -99,6 +99,17 @@
       color: #06202b;
       font-weight: 600;
     }
+    .btn {
+      padding: 8px 14px;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn[hidden] { display: none; }
     #status { color: var(--muted); font-size: 0.9rem; }
     #status.error { color: var(--error); }
     #location-meta { color: var(--muted); font-size: 0.9rem; }
@@ -109,11 +120,51 @@
       border-radius: 12px;
       padding: 8px 8px 0;
     }
+    .chart-head {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 12px 0;
+    }
+    .chart-title { font-size: 0.95rem; font-weight: 600; }
+    .info {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      font-size: 11px;
+      line-height: 1;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      cursor: help;
+      flex: none;
+    }
+    .info:hover { color: var(--accent); border-color: var(--accent); }
+    .apply-zoom {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 3px 9px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .apply-zoom:hover { color: var(--accent); border-color: var(--accent); }
     .chart-card .badges {
-      padding: 0 12px;
+      padding: 4px 12px 0;
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+      justify-content: center;
     }
     .badge {
       font-size: 0.72rem;
@@ -141,7 +192,15 @@
     }
     .model-row:last-child { border-bottom: none; }
     .model-row .name { min-width: 220px; font-weight: 600; }
-    .model-row .models { color: var(--muted); }
+    .model-row .models {
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .model-row .missing { color: #fbbf24; }
+    .model-row .coverage { color: #94a3b8; font-size: 0.82rem; }
+    #models-summary { margin: 0 0 12px; color: var(--muted); font-size: 0.85rem; }
     @media (min-width: 900px) {
       .charts { grid-template-columns: 1fr 1fr; }
       .charts .chart-card.wide { grid-column: 1 / -1; }
@@ -164,6 +223,8 @@
         <button data-mode="hourly" class="active">stündlich</button>
         <button data-mode="daily">täglich</button>
       </div>
+      <span id="window-hint"></span>
+      <button id="reset-zoom" class="btn" hidden>Zoom zurücksetzen</button>
       <span id="status"></span>
     </div>
     <div id="location-meta"></div>
@@ -172,6 +233,7 @@
 
     <div class="panel" id="models-panel" hidden>
       <h2>Genutzte Modelle je Parameter</h2>
+      <p id="models-summary"></p>
       <div id="models-list"></div>
     </div>
   </main>

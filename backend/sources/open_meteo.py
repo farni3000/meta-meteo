@@ -9,6 +9,8 @@ from ..config import (
     DAILY_VARIABLES,
     FORECAST_API_URL,
     HOURLY_VARIABLES,
+    UNIT_OVERRIDES,
+    VALUE_SCALES,
 )
 from ..models import NormalizedForecast
 from .base import ForecastSource
@@ -27,13 +29,14 @@ def _series(
     block: dict[str, Any],
     variable: str,
     model: str,
+    scale: float = 1.0,
 ) -> list[Optional[float]]:
     values = block.get(variable)
     if values is None:
         values = block.get(f"{variable}_{model}")
     if values is None:
         return []
-    return [None if v is None else float(v) for v in values]
+    return [None if v is None else float(v) * scale for v in values]
 
 
 class OpenMeteoForecastSource(ForecastSource):
@@ -66,16 +69,20 @@ class OpenMeteoForecastSource(ForecastSource):
         hourly: dict[str, list[Optional[float]]] = {}
         hourly_resolved_units: dict[str, str] = {}
         for canonical, variable in HOURLY_VARIABLES.items():
-            hourly[canonical] = _series(hourly_block, variable, self.model)
-            unit = _unit(hourly_units, variable, self.model)
+            hourly[canonical] = _series(
+                hourly_block, variable, self.model, VALUE_SCALES.get(canonical, 1.0)
+            )
+            unit = UNIT_OVERRIDES.get(canonical) or _unit(hourly_units, variable, self.model)
             if unit is not None:
                 hourly_resolved_units[canonical] = unit
 
         daily: dict[str, list[Optional[float]]] = {}
         daily_resolved_units: dict[str, str] = {}
         for canonical, variable in DAILY_VARIABLES.items():
-            daily[canonical] = _series(daily_block, variable, self.model)
-            unit = _unit(daily_units, variable, self.model)
+            daily[canonical] = _series(
+                daily_block, variable, self.model, VALUE_SCALES.get(canonical, 1.0)
+            )
+            unit = UNIT_OVERRIDES.get(canonical) or _unit(daily_units, variable, self.model)
             if unit is not None:
                 daily_resolved_units[canonical] = unit
 

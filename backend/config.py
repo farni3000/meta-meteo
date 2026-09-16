@@ -1,23 +1,50 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
 
-CANONICAL_PARAMS: list[str] = [
-    "temperature_2m",
-    "wind_speed_10m",
-    "uv_index",
-    "precipitation_probability",
-    "precipitation",
+
+@dataclass(frozen=True)
+class ParameterSpec:
+    key: str
+    hourly: str
+    daily: str
+    unit: Optional[str] = None
+    scale: float = 1.0
+
+
+PARAMETER_SPECS: list[ParameterSpec] = [
+    ParameterSpec("temperature_2m", "temperature_2m", "temperature_2m_mean"),
+    ParameterSpec("wind_speed_10m", "wind_speed_10m", "wind_speed_10m_max"),
+    ParameterSpec("uv_index", "uv_index", "uv_index_max"),
+    ParameterSpec(
+        "precipitation_probability",
+        "precipitation_probability",
+        "precipitation_probability_max",
+    ),
+    ParameterSpec("precipitation", "precipitation", "precipitation_sum"),
+    ParameterSpec(
+        "sunshine_duration",
+        "sunshine_duration",
+        "sunshine_duration",
+        unit="h",
+        scale=1.0 / 3600.0,
+    ),
+    ParameterSpec("apparent_temperature", "apparent_temperature", "apparent_temperature_mean"),
+    ParameterSpec("cloud_cover", "cloud_cover", "cloud_cover_mean"),
+    ParameterSpec("pressure_msl", "pressure_msl", "pressure_msl_mean"),
 ]
 
-HOURLY_VARIABLES: dict[str, str] = {param: param for param in CANONICAL_PARAMS}
+CANONICAL_PARAMS: list[str] = [spec.key for spec in PARAMETER_SPECS]
 
-DAILY_VARIABLES: dict[str, str] = {
-    "temperature_2m": "temperature_2m_mean",
-    "wind_speed_10m": "wind_speed_10m_max",
-    "uv_index": "uv_index_max",
-    "precipitation_probability": "precipitation_probability_max",
-    "precipitation": "precipitation_sum",
+HOURLY_VARIABLES: dict[str, str] = {spec.key: spec.hourly for spec in PARAMETER_SPECS}
+
+DAILY_VARIABLES: dict[str, str] = {spec.key: spec.daily for spec in PARAMETER_SPECS}
+
+VALUE_SCALES: dict[str, float] = {spec.key: spec.scale for spec in PARAMETER_SPECS}
+
+UNIT_OVERRIDES: dict[str, str] = {
+    spec.key: spec.unit for spec in PARAMETER_SPECS if spec.unit is not None
 }
 
 DEFAULT_MODELS: list[str] = [

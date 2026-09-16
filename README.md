@@ -2,9 +2,10 @@
 
 Lokale Web-App (Backend + Browser-Frontend), die für einen Ort eine 7-Tage-Vorhersage
 aus mehreren unabhängigen Wettermodellen abfragt, pro Größe (Temperatur, Wind,
-UV-Index, Niederschlagswahrscheinlichkeit, Niederschlagsmenge) Mittelwert und
-Streuung (Standardabweichung) zwischen den Modellen berechnet und als Chart mit
-Fehlerband darstellt.
+UV-Index, Niederschlagswahrscheinlichkeit, Niederschlagsmenge, Sonnenstunden,
+gefühlte Temperatur, Bewölkung, Luftdruck) Mittelwert und Streuung
+(Standardabweichung) zwischen den Modellen berechnet und als Chart mit Fehlerband
+darstellt.
 
 ## Features (v1)
 
@@ -15,9 +16,16 @@ Fehlerband darstellt.
   für den jeweiligen Zeitschritt einen Wert liefern. Fehlende Werte werden
   ausgeschlossen (nicht als 0 gewertet).
 - Fehlerband als `mean ± 1σ` in einem Plotly-Chart je Parameter.
-- Umschalter „stündlich / täglich“.
+- Gestrichelte Overlays: gefühlte Temperatur im Temperatur-Chart, Bewölkung
+  (rechte Achse, %) im Sonnenstunden-Chart.
+- Umschalter „stündlich / täglich“; stündlich startet die Ansicht mit den ersten
+  3 Tagen (per Zoom alle 7 Tage).
+- Zoom-Sync: Button „Zoom auf alle“ in jedem Chart überträgt den sichtbaren
+  Zeitbereich auf alle anderen Charts; „Zoom zurücksetzen“ stellt die
+  Standardansicht wieder her.
 - Transparenz: pro Parameter wird angezeigt, welche Modelle tatsächlich eingeflossen
-  sind; Badges für „nur 1 Modell“ und „nur täglich aufgelöst“.
+  sind und welche fehlen; Badges für „nur 1 Modell“, „nur täglich aufgelöst“ und
+  schwankende Modellanzahl.
 - Kurzlebiger In-Memory-Cache (TTL 10 Minuten), Key = Koordinaten + Modellauswahl.
 - Kein Scheduler, kein Scraping, kein API-Key, kein LLM zur Laufzeit.
 
@@ -130,13 +138,19 @@ ohne neuen Request.
   `icon_seamless`, `gfs_seamless`, `ecmwf_ifs025`, `gem_seamless`,
   `ukmo_seamless`, `meteofrance_seamless`.
 - `ALLOWED_MODELS` – zusätzlich `jma_seamless` (v. a. für Asien-Pazifik sinnvoll).
-- `DAILY_VARIABLES` – Mapping der kanonischen Parameter auf Tagesvariablen
-  (`temperature_2m_mean`, `wind_speed_10m_max`, `uv_index_max`,
-  `precipitation_probability_max`, `precipitation_sum`).
+- `PARAMETER_SPECS` – je Parameter stündliche/tägliche API-Variable, optionale
+  Anzeige-Einheit und Skalierungsfaktor. Daraus werden `CANONICAL_PARAMS`,
+  `HOURLY_VARIABLES`, `DAILY_VARIABLES`, `VALUE_SCALES` und `UNIT_OVERRIDES`
+  abgeleitet. Neue Metriken werden hier ergänzt (plus Eintrag im Frontend).
+  Beispiel Sonnenstunden: `sunshine_duration`, `scale=1/3600`, `unit="h"`.
 - `CACHE_TTL_SECONDS`, `FORECAST_MAX_DAYS`, `DISPLAY_NAMES`.
 
 Modellauswahl ist damit an einer Stelle änderbar und wird über den Query-Parameter
 `models` pro Request überschrieben.
+
+Eine Metrik hinzufügen: `ParameterSpec` in `backend/config.py` ergänzen und einen
+Eintrag in der `CHARTS`-Liste in `frontend/app.js` (mit Label, Farbe, Tooltip)
+anlegen. Aggregation und Caching sind generisch und brauchen keine Anpassung.
 
 ## Bekannte Einschränkung: UV-Index
 
@@ -146,9 +160,15 @@ und täglich); die übrigen liefern `null`-Arrays (kein Fehler). Ein UV-Fehlerba
 den UV-Chart mit dem Badge „nur 1 Modell“. Die Aggregationslogik bleibt generisch:
 sobald weitere Modelle UV liefern, fließen sie automatisch ein.
 
+## Weitere Modell-Einschränkungen
+
 `precipitation_probability` fehlt bei `ukmo_seamless`, `meteofrance_seamless` und
 `jma_seamless`; die Aggregation nutzt dann nur die verfügbaren Modelle und weist
 sie unter „Genutzte Modelle je Parameter“ aus.
+
+`sunshine_duration` liefert `ukmo_seamless` nur für ~2,6 Tage und
+`meteofrance_seamless` für ~5 Tage; die Modellanzahl sinkt entsprechend gegen Ende
+des Zeitraums und wird im Frontend als „Modellanzahl X–Y“ ausgewiesen.
 
 ## Projektstruktur
 
@@ -166,6 +186,7 @@ meta-meteo/
       geocoding.py       # Open-Meteo Geocoding Client
     tests/
       test_aggregation.py
+      test_parameters.py
   frontend/
     index.html
     app.js
@@ -187,6 +208,7 @@ meta-meteo/
 
 ## Manuell getestete Orte
 
-Berlin (Mitteleuropa), Bremerhaven (Küste), Innsbruck (Berg) sowie Tokyo (mit
-`models=jma_seamless,gfs_seamless,ecmwf_ifs025`). Alle fünf Parameter liefern
-plausible Werte; Modellabdeckung und Badges werden im Frontend korrekt angezeigt.
+Berlin (Mitteleuropa), Bremerhaven (Küste) und Innsbruck (Berg) mit den
+Default-Modellen sowie Tokyo (mit `models=jma_seamless,gfs_seamless,ecmwf_ifs025`).
+Alle Parameter liefern plausible Werte; Modellabdeckung und Badges werden im
+Frontend korrekt angezeigt.
