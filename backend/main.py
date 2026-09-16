@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+import asyncio
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+
+import httpx
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.staticfiles import StaticFiles
+
+from .aggregation import aggregate
+from .cache import TTLCache
+from .config import (
+    CACHE_TTL_SECONDS,
+    DEFAULT_FORECAST_DAYS,
+    DEFAULT_MODELS,
+    FORECAST_MAX_DAYS,
+    HTTP_TIMEOUT_SECONDS,
+    settings,
+)
+from .models import (
+    ForecastResponse,
+    GeocodeResponse,
+    LocationInfo,
+    NormalizedForecast,
+)
+from .sources.geocoding import GeocodingClient
+from .sources.open_meteo import OpenMeteoForecastSource
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+_cache = TTLCache(CACHE_TTL_SECONDS)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
+        app.state.client = client
+        app.state.geocoder = GeocodingClient(client)
+        yield
+
+
+app = FastAPI(title="Meta-Wetter-App", version="1.0.0", lifespan=lifespan)
+
+
+@app.get("/api/geocode", response_model=GeocodeResponse)
+async def geocode(
+    query: str = Query(..., min_length=1),
+    count: int = Query(8, ge=1, le=20),
+) -> GeocodeResponse:
+    try:
+        results = await app.state.geocoder.search(query, count=count)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Geocoding fehlgeschlagen: {exc}") from exc
+    return GeocodeResponse(results=results)
+
+
+def _resolve_models(models: Optional[str]) -> list[str]:
+    if not models:
+        return list(DEFAULT_MODELS)
+    model_list = [name.strip() for name in models.split(",") if name.strip()]
+    if not model_list:
+        return list(DEFAULT_MODELS)
+    unknown = [name for name in model_list if name not in settings.allowed_models]
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unbekannte Modelle: {', '.join(unknown)}",
+        )
+    return model_list
+
+
+@app.get("/api/forecast", response_model=ForecastResponse)
+async def forecast(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+    days: int = Query(DEFAULT_FORECAST_DAYS, ge=1, le=FORECAST_MAX_DAYS),
+    models: Optional[str] = Query(None),
+    name: Optional[str] = Query(None),
+    country: Optional[str] = Query(None),
+    admin1: Optional[str] = Query(None),
+    tz: Optional[str] = Query(None),
+) -> ForecastResponse:
+    model_list = _resolve_models(models)
+    cache_key = f"{lat:.3f}:{lon:.3f}:{days}:{','.join(sorted(model_list))}"
+    cached = _cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    client: httpx.AsyncClient = app.state.client
+    tasks = [
+        OpenMeteoForecastSource(client, model).fetch(lat, lon, days)
+        for model in model_list
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    forecasts: list[NormalizedForecast] = []
+    errors: list[str] = []
+    for model, result in zip(model_list, results):
+        if isinstance(result, NormalizedForecast):
+            forecasts.append(result)
+        else:
+            errors.append(f"{model}: {result}")
+
+    if not forecasts:
+        raise HTTPException(
+            status_code=502,
+            detail={"message": "Keine Modell-Daten verfügbar", "errors": errors},
+        )
+
+    hourly_block, daily_block, models_used = aggregate(forecasts)
+
+    location = LocationInfo(
+        name=name or f"{lat:.4f}, {lon:.4f}",
+        country=country,
+        admin1=admin1,
+        lat=lat,
+        lon=lon,
+        timezone=tz or forecasts[0].timezone,
+    )
+    response = ForecastResponse(
+        location=location,
+        resolution="hourly",
+        hourly=hourly_block,
+        daily=daily_block,
+        models_requested=model_list,
+        models_used=models_used,
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+    _cache.set(cache_key, response)
+    return response
+
+
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
