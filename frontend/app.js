@@ -251,6 +251,46 @@ function overlayTrace(x, series, overlay) {
   };
 }
 
+function nextDayString(day) {
+  const [year, month, date] = day.split("-").map(Number);
+  const next = new Date(Date.UTC(year, month - 1, date + 1));
+  return next.toISOString().slice(0, 10);
+}
+
+function dayShapes(timestamps, mode) {
+  if (!timestamps.length) return [];
+  const days = [];
+  timestamps.forEach((timestamp) => {
+    const day = timestamp.slice(0, 10);
+    if (!days.length || days[days.length - 1].day !== day) {
+      days.push({ day, start: timestamp });
+    }
+  });
+  const shapes = [];
+  days.forEach((entry, index) => {
+    if (index % 2 === 0) return;
+    const end =
+      index + 1 < days.length
+        ? days[index + 1].start
+        : mode === "hourly"
+        ? `${nextDayString(entry.day)}T00:00`
+        : nextDayString(entry.day);
+    shapes.push({
+      type: "rect",
+      xref: "x",
+      yref: "paper",
+      x0: entry.start,
+      x1: end,
+      y0: 0,
+      y1: 1,
+      fillcolor: "rgba(148, 163, 184, 0.08)",
+      line: { width: 0 },
+      layer: "below",
+    });
+  });
+  return shapes;
+}
+
 function extractXRange(eventData, el) {
   if (eventData["xaxis.autorange"]) return null;
   if ("xaxis.range[0]" in eventData && "xaxis.range[1]" in eventData) {
@@ -380,6 +420,7 @@ function renderChart(param, block, series) {
       title: { text: series.unit || "" },
       rangemode: param.zero ? "tozero" : "normal",
     },
+    shapes: dayShapes(timestamps, state.mode),
   };
   if (xRange) {
     layout.xaxis.range = xRange;
