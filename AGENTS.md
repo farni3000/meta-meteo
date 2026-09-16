@@ -1,0 +1,75 @@
+# AGENTS.md
+
+Kurzer Einstieg für Agenten. Die vollständige Doku (Setup, API, Konfiguration,
+Einschränkungen) steht in **[README.md](./README.md)** – bei Fragen zuerst dort
+nachsehen.
+
+## Was ist das
+
+Lokale Web-App (FastAPI-Backend + statisches Browser-Frontend), die für einen Ort
+eine 7-Tage-Vorhersage aus mehreren Open-Meteo-Wettermodellen abfragt, pro
+Parameter Mittelwert + Streuung aggregiert und mit Plotly als Charts darstellt.
+Kein API-Key, kein Scheduler, kein LLM zur Laufzeit.
+
+## Struktur
+
+```
+backend/
+  main.py          # FastAPI-App: /api/geocode, /api/forecast, /api/favorites, Cache, StaticFiles
+  config.py        # PARAMETER_SPECS, Modelllisten, TTL, DISPLAY_NAMES
+  models.py        # Pydantic-Response-Modelle + NormalizedForecast
+  aggregation.py   # Mittelwert/Std, zirkuläre Aggregation, Tagesfallback
+  cache.py         # In-Memory-TTL-Cache
+  favorites.py     # JSON-Persistenz (data/favorites.json)
+  sources/
+    open_meteo.py  # Open-Meteo Client, ein Request pro Modell
+    geocoding.py   # Open-Meteo Geocoding
+    base.py        # ForecastSource(ABC)
+  tests/           # pytest, laufen über backend/tests
+frontend/
+  index.html       # Layout + CSS, lädt Plotly per CDN
+  app.js           # Chart-Konfiguration (CHARTS), Rendering, Favoriten, Zoom-Sync
+```
+
+## Datenfluss
+
+`sources/open_meteo.py` normalisiert jede Modell-Antwort in `NormalizedForecast`
+(`models.py`). `aggregation.aggregate()` baut daraus je Auflösung (hourly/daily)
+einen `ResolutionBlock` mit `ParameterSeries` pro Parameter. `main.py` cached und
+liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
+(`frontend/app.js`) eine Chart-Karte; `STD` wird als Fehlerband gezeichnet.
+
+## Wichtige Konventionen
+
+- **Parameter zentral definieren:** Neue Metrik = `ParameterSpec` in
+  `backend/config.py` plus Eintrag in `CHARTS` in `frontend/app.js`. Aggregation
+  und Cache sind generisch und brauchen keine Anpassung. Details in der README.
+- **Zirkuläre Größen:** Winkelwerte (z. B. `wind_direction_10m`) mit
+  `circular=True` markieren. Dann nutzt `aggregation.py` Vektor-Mittel
+  (`sin`/`cos` → `atan2`) und Kreissstandardabweichung statt arithmetischem
+  Mittel. Niemals Winkel arithmetisch mitteln.
+- **Ein Request pro Modell**, parallel via `asyncio.gather`.
+- **Fehlende Werte** werden ausgeschlossen, nie als 0 gewertet; fehlt alles,
+  sind `mean`/`std` `null`.
+- **Frontend-Konsolen-/DOM-Änderungen** ohne Build-Schritt: `frontend/app.js`
+  wird direkt geladen.
+
+## Tests
+
+```bash
+source .venv/bin/activate
+pytest
+```
+
+Testfokus ist die Aggregationslogik (Mittelwert/Std, fehlende Werte,
+Ein-Modell-Fall, Tagesfallback, zirkuläre Windrichtung).
+
+## Starten
+
+```bash
+source .venv/bin/activate
+uvicorn backend.main:app --reload
+# http://localhost:8000
+```
+
+Alternativ `./start.command` (legt venv an, startet Server, öffnet Browser).

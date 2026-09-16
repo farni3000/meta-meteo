@@ -4,16 +4,32 @@ from typing import Optional
 
 import numpy as np
 
-from .config import CANONICAL_PARAMS, DISPLAY_NAMES
+from .config import CANONICAL_PARAMS, DISPLAY_NAMES, PARAMETER_SPECS
 from .models import NormalizedForecast, ParameterSeries, ResolutionBlock
 
 HOURLY = "hourly"
 DAILY = "daily"
 
+CIRCULAR_PARAMS: set[str] = {spec.key for spec in PARAMETER_SPECS if spec.circular}
+
+
+def _circular_stats(row: list[float]) -> tuple[float, float]:
+    array = np.radians(np.asarray(row, dtype=float))
+    sin_mean = float(np.mean(np.sin(array)))
+    cos_mean = float(np.mean(np.cos(array)))
+    mean_degrees = float(np.degrees(np.arctan2(sin_mean, cos_mean))) % 360.0
+    resultant = float(np.hypot(sin_mean, cos_mean))
+    if len(row) < 2 or resultant >= 1.0:
+        return mean_degrees, 0.0
+    if resultant <= 0.0:
+        return mean_degrees, 180.0
+    return mean_degrees, float(np.degrees(np.sqrt(-2.0 * np.log(resultant))))
+
 
 def _aggregate_series(
     series_by_model: dict[str, list[Optional[float]]],
     length: int,
+    circular: bool = False,
 ) -> tuple[list[Optional[float]], list[Optional[float]], list[str], list[int]]:
     models_used = [
         model
@@ -34,6 +50,11 @@ def _aggregate_series(
         if not row:
             means.append(None)
             stds.append(None)
+            continue
+        if circular:
+            mean, std = _circular_stats(row)
+            means.append(mean)
+            stds.append(std)
             continue
         array = np.asarray(row, dtype=float)
         means.append(float(np.mean(array)))
@@ -63,7 +84,11 @@ def _daily_fallback(
         return None
 
     series_by_model = {f.source: f.daily.get(param, []) for f in forecasts}
-    mean, std, models_used, counts = _aggregate_series(series_by_model, len(daily_times))
+    mean, std, models_used, counts = _aggregate_series(
+        series_by_model,
+        len(daily_times),
+        circular=param in CIRCULAR_PARAMS,
+    )
     if not models_used:
         return None
 
@@ -94,7 +119,11 @@ def _build_block(
     for param in CANONICAL_PARAMS:
         attribute = "hourly" if resolution == HOURLY else "daily"
         series_by_model = {f.source: getattr(f, attribute).get(param, []) for f in forecasts}
-        mean, std, models_used, counts = _aggregate_series(series_by_model, len(timestamps))
+        mean, std, models_used, counts = _aggregate_series(
+            series_by_model,
+            len(timestamps),
+            circular=param in CIRCULAR_PARAMS,
+        )
         unit = _unit(forecasts, resolution, param)
         param_resolution = resolution
 

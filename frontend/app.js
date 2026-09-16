@@ -24,7 +24,8 @@ const CHARTS = [
     label: "Wind (10 m)",
     color: "#38bdf8",
     zero: true,
-    info: "Windgeschwindigkeit in 10 m Höhe über Grund – die meteorologische Standard-Messhöhe. Wind in 2 m Höhe ist bei Open-Meteo nicht verfügbar.",
+    info: "Windgeschwindigkeit in 10 m Höhe über Grund – die meteorologische Standard-Messhöhe. Wind in 2 m Höhe ist bei Open-Meteo nicht verfügbar. Die Pfeile zeigen die mittlere Strömungsrichtung; blasser = Modelle uneiniger.",
+    direction: { key: "wind_direction_10m", label: "Windrichtung" },
   },
   {
     key: "precipitation_probability",
@@ -66,9 +67,35 @@ CHARTS.forEach((chart) => {
       note: `gestrichelt im Chart „${chart.label}“`,
     });
   });
+  if (chart.direction) {
+    PANEL_PARAMS.push({
+      key: chart.direction.key,
+      label: chart.direction.label,
+      note: `als Pfeile im Chart „${chart.label}“`,
+    });
+  }
 });
 
 const HOURLY_WINDOW_DAYS = 3;
+
+const CARDINALS = [
+  "N",
+  "NNO",
+  "NO",
+  "ONO",
+  "O",
+  "OSO",
+  "SO",
+  "SSO",
+  "S",
+  "SSW",
+  "SW",
+  "WSW",
+  "W",
+  "WNW",
+  "NW",
+  "NNW",
+];
 
 const DISPLAY_NAMES = {
   icon_seamless: "DWD ICON",
@@ -405,6 +432,61 @@ function overlayTrace(x, series, overlay) {
   };
 }
 
+function toCardinal(degrees) {
+  if (degrees === null || degrees === undefined) return "–";
+  const normalized = ((degrees % 360) + 360) % 360;
+  return CARDINALS[Math.round(normalized / 22.5) % 16];
+}
+
+function directionTrace(x, series, color, step = 1) {
+  const directions = series.mean;
+  const spreads = series.std || [];
+  const counts = series.model_count || [];
+  const arrowX = [];
+  const angles = [];
+  const opacities = [];
+  const customdata = [];
+  for (let index = 0; index < x.length; index += step) {
+    const value = directions[index];
+    if (value === null || value === undefined) continue;
+    const spread = spreads[index];
+    arrowX.push(x[index]);
+    angles.push((value + 180) % 360);
+    opacities.push(
+      spread === null || spread === undefined
+        ? 0.9
+        : Math.max(0.15, 1 - Math.min(spread, 45) / 45)
+    );
+    customdata.push([
+      Math.round(value),
+      toCardinal(value),
+      spread === null || spread === undefined ? null : Math.round(spread),
+      counts[index] || 0,
+    ]);
+  }
+  return {
+    x: arrowX,
+    y: arrowX.map(() => 0.9),
+    customdata,
+    type: "scatter",
+    mode: "markers",
+    yaxis: "y2",
+    marker: {
+      symbol: "arrow",
+      angle: angles,
+      angleref: "up",
+      size: 11,
+      color,
+      opacity: opacities,
+      line: { width: 0 },
+    },
+    name: "Windrichtung (Pfeile)",
+    hovertemplate:
+      "<b>%{x}</b><br>Wind aus %{customdata[1]} (%{customdata[0]}°)" +
+      "<br>Streuung: ±%{customdata[2]}°<br>%{customdata[3]} Modelle<extra></extra>",
+  };
+}
+
 function nextDayString(day) {
   const [year, month, date] = day.split("-").map(Number);
   const next = new Date(Date.UTC(year, month - 1, date + 1));
@@ -553,11 +635,21 @@ function renderChart(param, block, series) {
     if (overlay.secondary) secondaryUnit = overlaySeries.unit || "";
   });
 
+  let hasDirection = false;
+  if (param.direction) {
+    const directionSeries = block.parameters[param.direction.key];
+    if (directionSeries && directionSeries.models_used.length > 0) {
+      const arrowStep = state.mode === "hourly" ? 3 : 1;
+      traces.push(directionTrace(timestamps, directionSeries, param.color, arrowStep));
+      hasDirection = true;
+    }
+  }
+
   const layout = {
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
     font: { color: "#cbd5e1" },
-    margin: { l: 54, r: secondaryUnit !== null ? 48 : 18, t: 42, b: 46 },
+    margin: { l: 54, r: secondaryUnit !== null || hasDirection ? 48 : 18, t: 42, b: 46 },
     height: 300,
     showlegend: true,
     legend: { orientation: "h", x: 0.5, xanchor: "center", y: 1.0, yanchor: "bottom" },
@@ -588,6 +680,16 @@ function renderChart(param, block, series) {
       range: [0, 100],
       color: "#94a3b8",
       title: { text: secondaryUnit },
+    };
+  } else if (hasDirection) {
+    layout.yaxis2 = {
+      overlaying: "y",
+      side: "right",
+      showgrid: false,
+      showticklabels: false,
+      zeroline: false,
+      fixedrange: true,
+      range: [0, 1],
     };
   }
 

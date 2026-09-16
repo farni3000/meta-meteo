@@ -2,10 +2,11 @@
 
 Lokale Web-App (Backend + Browser-Frontend), die für einen Ort eine 7-Tage-Vorhersage
 aus mehreren unabhängigen Wettermodellen abfragt, pro Größe (Temperatur, Wind,
-UV-Index, Niederschlagswahrscheinlichkeit, Niederschlagsmenge, Sonnenstunden,
-gefühlte Temperatur, Bewölkung, Luftdruck) Mittelwert und Streuung
+Windrichtung, UV-Index, Niederschlagswahrscheinlichkeit, Niederschlagsmenge,
+Sonnenstunden, gefühlte Temperatur, Bewölkung, Luftdruck) Mittelwert und Streuung
 (Standardabweichung) zwischen den Modellen berechnet und als Chart mit Fehlerband
-darstellt.
+darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
+(Vektorsumme) statt arithmetisch gemittelt.
 
 ## Features (v1)
 
@@ -15,7 +16,13 @@ darstellt.
 - Aggregation: Mittelwert + Populations-Standardabweichung über alle Modelle, die
   für den jeweiligen Zeitschritt einen Wert liefern. Fehlende Werte werden
   ausgeschlossen (nicht als 0 gewertet).
+- Zirkuläre Aggregation: Richtungswerte (z. B. 350° und 10°) werden über
+  Einheitsvektoren (`sin`/`cos` → `atan2`) gemittelt; die Streuung ist die
+  Kreissstandardabweichung `sqrt(-2·ln R)`.
 - Fehlerband als `mean ± 1σ` in einem Plotly-Chart je Parameter.
+- Windrichtung als gedrehte Pfeile im Wind-Chart (Strömungsrichtung, d. h. Pfeil
+  zeigt, wohin der Wind weht). Pfeile mit großer Modell-Uneinigkeit werden
+  transparenter; Hover zeigt Himmelsrichtung, Grad, Streuung und Modellanzahl.
 - Gestrichelte Overlays: gefühlte Temperatur im Temperatur-Chart, Bewölkung
   (rechte Achse, %) im Sonnenstunden-Chart.
 - Umschalter „stündlich / täglich“; stündlich startet die Ansicht mit den ersten
@@ -78,8 +85,9 @@ pytest
 ```
 
 Die Tests decken die Aggregationslogik ab: Mittelwert/Populations-Std,
-Ausschluss fehlender Werte, Ein-Modell-Fall (Std = 0), komplett fehlende Reihen
-und den Rückfall auf Tageswerte.
+Ausschluss fehlender Werte, Ein-Modell-Fall (Std = 0), komplett fehlende Reihen,
+den Rückfall auf Tageswerte sowie die zirkuläre Aggregation von Windrichtung
+(Vektor-Mittel über den Nordpunkt, Kreisspreizung, Tagesfallback).
 
 ## API
 
@@ -154,10 +162,13 @@ Alle Endpoints liefern `{"favorites": [...]}`. Gespeichert wird in
   `ukmo_seamless`, `meteofrance_seamless`.
 - `ALLOWED_MODELS` – zusätzlich `jma_seamless` (v. a. für Asien-Pazifik sinnvoll).
 - `PARAMETER_SPECS` – je Parameter stündliche/tägliche API-Variable, optionale
-  Anzeige-Einheit und Skalierungsfaktor. Daraus werden `CANONICAL_PARAMS`,
-  `HOURLY_VARIABLES`, `DAILY_VARIABLES`, `VALUE_SCALES` und `UNIT_OVERRIDES`
-  abgeleitet. Neue Metriken werden hier ergänzt (plus Eintrag im Frontend).
+  Anzeige-Einheit, Skalierungsfaktor und `circular`-Flag. Daraus werden
+  `CANONICAL_PARAMS`, `HOURLY_VARIABLES`, `DAILY_VARIABLES`, `VALUE_SCALES`,
+  `UNIT_OVERRIDES` und `CIRCULAR_PARAMS` abgeleitet. Neue Metriken werden hier
+  ergänzt (plus Eintrag im Frontend).
   Beispiel Sonnenstunden: `sunshine_duration`, `scale=1/3600`, `unit="h"`.
+  Beispiel Windrichtung: `wind_direction_10m`, `unit="°"`, `circular=True`,
+  täglich `wind_direction_10m_dominant`.
 - `CACHE_TTL_SECONDS`, `FORECAST_MAX_DAYS`, `DISPLAY_NAMES`.
 
 Modellauswahl ist damit an einer Stelle änderbar und wird über den Query-Parameter
@@ -166,6 +177,10 @@ Modellauswahl ist damit an einer Stelle änderbar und wird über den Query-Param
 Eine Metrik hinzufügen: `ParameterSpec` in `backend/config.py` ergänzen und einen
 Eintrag in der `CHARTS`-Liste in `frontend/app.js` (mit Label, Farbe, Tooltip)
 anlegen. Aggregation und Caching sind generisch und brauchen keine Anpassung.
+Für Winkelgrößen `circular=True` setzen, damit der Vektor-Mittelwert statt des
+arithmetischen Mittels verwendet wird. Soll die Größe als Pfeile in einem
+bestehenden Chart erscheinen, im Frontend-Eintrag `direction: { key, label }`
+ergänzen statt ein eigenes Chart anzulegen.
 
 ## Bekannte Einschränkung: UV-Index
 
@@ -209,7 +224,8 @@ meta-meteo/
     app.js
   requirements.txt
   pytest.ini
-  README.md
+  AGENTS.md            # Kurz-Überblick für Agenten (verweist auf diese README)
+  README.md            # Ausführliche Doku (Setup, API, Konfiguration)
 ```
 
 ## Erweiterbarkeit

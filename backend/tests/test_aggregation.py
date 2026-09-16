@@ -132,6 +132,54 @@ def test_hourly_data_preferred_over_daily_fallback() -> None:
     assert series.mean == [5.0]
 
 
+def test_circular_mean_wraps_around_north() -> None:
+    times = ["t0"]
+    a = make_forecast("a", times, {"wind_direction_10m": [350.0]})
+    b = make_forecast("b", times, {"wind_direction_10m": [10.0]})
+
+    hourly, _, _ = aggregate([a, b])
+    series = hourly.parameters["wind_direction_10m"]
+
+    assert min(abs(series.mean[0] - 0.0), abs(series.mean[0] - 360.0)) < 1e-6
+    assert abs(series.std[0] - 10.0) < 0.1
+    assert series.model_count == [2]
+
+
+def test_single_model_direction_has_zero_std() -> None:
+    a = make_forecast("a", ["t0"], {"wind_direction_10m": [90.0]})
+
+    hourly, _, _ = aggregate([a])
+    series = hourly.parameters["wind_direction_10m"]
+
+    assert series.mean == [90.0]
+    assert series.std == [0.0]
+
+
+def test_direction_falls_back_to_daily_circular() -> None:
+    hourly_times = ["2026-09-16T00:00", "2026-09-16T01:00"]
+    daily_times = ["2026-09-16T00:00"]
+    a = make_forecast(
+        "a",
+        hourly_times,
+        {"wind_direction_10m": [None, None]},
+        daily_times,
+        {"wind_direction_10m": [350.0]},
+    )
+    b = make_forecast(
+        "b",
+        hourly_times,
+        {"wind_direction_10m": [None, None]},
+        daily_times,
+        {"wind_direction_10m": [10.0]},
+    )
+
+    hourly, _, _ = aggregate([a, b])
+    series = hourly.parameters["wind_direction_10m"]
+
+    assert series.resolution == "daily"
+    assert min(abs(series.mean[0] - 0.0), abs(series.mean[0] - 360.0)) < 1e-6
+
+
 def test_models_used_is_sorted_by_display_name() -> None:
     times = ["t0"]
     a = make_forecast("icon_seamless", times, {"temperature_2m": [1.0]})

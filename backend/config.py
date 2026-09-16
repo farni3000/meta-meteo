@@ -15,11 +15,19 @@ class ParameterSpec:
     daily: str
     unit: Optional[str] = None
     scale: float = 1.0
+    circular: bool = False
 
 
 PARAMETER_SPECS: list[ParameterSpec] = [
     ParameterSpec("temperature_2m", "temperature_2m", "temperature_2m_mean"),
     ParameterSpec("wind_speed_10m", "wind_speed_10m", "wind_speed_10m_max"),
+    ParameterSpec(
+        "wind_direction_10m",
+        "wind_direction_10m",
+        "wind_direction_10m_dominant",
+        unit="°",
+        circular=True,
+    ),
     ParameterSpec("uv_index", "uv_index", "uv_index_max"),
     ParameterSpec(
         "precipitation_probability",
