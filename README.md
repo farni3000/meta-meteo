@@ -1,4 +1,4 @@
-# Meta-Wetter
+# MetaMeteo
 
 Lokale Web-App (Backend + Browser-Frontend), die für einen Ort eine 7-Tage-Vorhersage
 aus mehreren unabhängigen Wettermodellen abfragt, pro Größe (Temperatur, Wind,
@@ -27,6 +27,10 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   (rechte Achse, %) im Sonnenstunden-Chart.
 - Umschalter „stündlich / täglich“; stündlich startet die Ansicht mit den ersten
   3 Tagen (per Zoom alle 7 Tage).
+- Datenstart ab „jetzt“: Der stündliche Graph beginnt an der aktuellen Minute
+  (Ortszeit des Ortes). Eine harte Achsengrenze (`xaxis.minallowed`) verhindert,
+  dass vergangene Stunden – auch per Zoom oder Pan – sichtbar werden. Der
+  Tages-Chart startet mit dem heutigen Tag um 00:00.
 - Zoom-Sync: Button „Zoom auf alle“ in jedem Chart überträgt den sichtbaren
   Zeitbereich auf alle anderen Charts; „Zoom zurücksetzen“ stellt die
   Standardansicht wieder her.
@@ -86,8 +90,9 @@ pytest
 
 Die Tests decken die Aggregationslogik ab: Mittelwert/Populations-Std,
 Ausschluss fehlender Werte, Ein-Modell-Fall (Std = 0), komplett fehlende Reihen,
-den Rückfall auf Tageswerte sowie die zirkuläre Aggregation von Windrichtung
-(Vektor-Mittel über den Nordpunkt, Kreisspreizung, Tagesfallback).
+den Rückfall auf Tageswerte, die zirkuläre Aggregation von Windrichtung
+(Vektor-Mittel über den Nordpunkt, Kreisspreizung, Tagesfallback) sowie die
+Ortszeit-Berechnung (`now`) inkl. UTC-Fallback.
 
 ## API
 
@@ -132,9 +137,15 @@ Antwort (gekürzt):
   "daily": {"timestamps": ["2026-09-16", "..."], "parameters": {"...": {}}},
   "models_requested": ["icon_seamless", "gfs_seamless", "..."],
   "models_used": ["icon_seamless", "gfs_seamless", "..."],
-  "generated_at": "2026-09-16T17:27:21+00:00"
+  "generated_at": "2026-09-16T17:27:21+00:00",
+  "now": "2026-09-16T19:34"
 }
 ```
+
+`now` ist die aktuelle Ortszeit des Ortes im Format `YYYY-MM-DDTHH:mm` (ohne
+Zeitzonen-Offset, identisch zu den Timestamps) und wird bei jedem Request frisch
+gesetzt – auch bei Cache-Treffern. Das Frontend nutzt sie als Startgrenze der
+x-Achse.
 
 `std` ist die Populations-Standardabweichung (`ddof=0`) über alle Modelle mit Wert.
 Bei genau einem Modell ist `std = 0`; bei keinem Modell sind `mean`/`std` `null`.
@@ -219,6 +230,7 @@ meta-meteo/
       test_aggregation.py
       test_parameters.py
       test_favorites.py
+      test_local_now.py
   frontend/
     index.html
     app.js

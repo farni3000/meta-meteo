@@ -139,6 +139,12 @@ function displayName(model) {
   return DISPLAY_NAMES[model] || model;
 }
 
+function startBound() {
+  const now = state.data && state.data.now;
+  if (!now) return null;
+  return state.mode === "hourly" ? now : `${now.slice(0, 10)}T00:00`;
+}
+
 function debounce(fn, wait) {
   let timer = null;
   return (...args) => {
@@ -618,13 +624,12 @@ function renderChart(param, block, series) {
   card.appendChild(plot);
 
   const timestamps = block.timestamps;
-  const xRange =
-    state.mode === "hourly" && timestamps.length
-      ? [
-          timestamps[0],
-          timestamps[Math.min(24 * HOURLY_WINDOW_DAYS, timestamps.length - 1)],
-        ]
-      : undefined;
+  const bound = startBound();
+  let xRange;
+  if (state.mode === "hourly" && timestamps.length) {
+    const start = bound && bound > timestamps[0] ? bound : timestamps[0];
+    xRange = [start, timestamps[Math.min(24 * HOURLY_WINDOW_DAYS, timestamps.length - 1)]];
+  }
 
   const traces = buildTraces(timestamps, series, param.color);
   let secondaryUnit = null;
@@ -660,6 +665,8 @@ function renderChart(param, block, series) {
       automargin: true,
       tickformat: state.mode === "hourly" ? "%d.%m. %Hh" : "%a %d.%m.",
       tickangle: state.mode === "hourly" ? -45 : 0,
+      minallowed: bound || undefined,
+      maxallowed: timestamps.length ? timestamps[timestamps.length - 1] : undefined,
     },
     yaxis: {
       gridcolor: "#334155",
@@ -823,7 +830,7 @@ function render() {
   renderFavorites();
   resetZoomBtn.hidden = false;
   windowHint.textContent =
-    state.mode === "hourly" ? "Anzeige: erste 3 Tage – für alle 7 Tage zoomen" : "";
+    state.mode === "hourly" ? "Anzeige ab jetzt: erste 3 Tage – für alle 7 Tage zoomen" : "";
   setStatus("Fertig.");
 }
 

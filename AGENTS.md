@@ -6,10 +6,10 @@ nachsehen.
 
 ## Was ist das
 
-Lokale Web-App (FastAPI-Backend + statisches Browser-Frontend), die für einen Ort
-eine 7-Tage-Vorhersage aus mehreren Open-Meteo-Wettermodellen abfragt, pro
-Parameter Mittelwert + Streuung aggregiert und mit Plotly als Charts darstellt.
-Kein API-Key, kein Scheduler, kein LLM zur Laufzeit.
+**MetaMeteo** – lokale Web-App (FastAPI-Backend + statisches Browser-Frontend),
+die für einen Ort eine 7-Tage-Vorhersage aus mehreren Open-Meteo-Wettermodellen
+abfragt, pro Parameter Mittelwert + Streuung aggregiert und mit Plotly als Charts
+darstellt. Kein API-Key, kein Scheduler, kein LLM zur Laufzeit.
 
 ## Struktur
 
@@ -53,6 +53,10 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   sind `mean`/`std` `null`.
 - **Frontend-Konsolen-/DOM-Änderungen** ohne Build-Schritt: `frontend/app.js`
   wird direkt geladen.
+- **Datenstart ab jetzt:** `ForecastResponse.now` (Ortszeit, `YYYY-MM-DDTHH:mm`)
+  wird pro Request frisch gesetzt. Das Frontend setzt `xaxis.minallowed` auf
+  diesen Wert (stündlich) bzw. auf 00:00 heute (täglich), damit vergangene Daten
+  auch per Zoom/Pan unsichtbar bleiben.
 
 ## Tests
 

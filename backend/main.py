@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
@@ -48,7 +49,7 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="Meta-Wetter-App", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="MetaMeteo", version="1.0.0", lifespan=lifespan)
 
 
 @app.get("/api/geocode", response_model=GeocodeResponse)
@@ -61,6 +62,14 @@ async def geocode(
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"Geocoding fehlgeschlagen: {exc}") from exc
     return GeocodeResponse(results=results)
+
+
+def _local_now(tz_name: Optional[str]) -> str:
+    try:
+        tz = ZoneInfo(tz_name) if tz_name else timezone.utc
+    except (ZoneInfoNotFoundError, ValueError):
+        tz = timezone.utc
+    return datetime.now(tz).strftime("%Y-%m-%dT%H:%M")
 
 
 def _resolve_models(models: Optional[str]) -> list[str]:
@@ -93,6 +102,7 @@ async def forecast(
     cache_key = f"{lat:.3f}:{lon:.3f}:{days}:{','.join(sorted(model_list))}"
     cached = _cache.get(cache_key)
     if cached is not None:
+        cached.now = _local_now(cached.location.timezone)
         return cached
 
     client: httpx.AsyncClient = app.state.client
@@ -134,6 +144,7 @@ async def forecast(
         models_requested=model_list,
         models_used=models_used,
         generated_at=datetime.now(timezone.utc).isoformat(),
+        now=_local_now(location.timezone),
     )
     _cache.set(cache_key, response)
     return response

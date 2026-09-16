@@ -64,6 +64,7 @@ class ForecastResponse(BaseModel):
     models_requested: list[str]
     models_used: list[str]
     generated_at: str
+    now: str
 
 
 class FavoriteCreate(BaseModel):
