@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
+
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+FAVORITES_PATH = DATA_DIR / "favorites.json"
 
 
 @dataclass(frozen=True)

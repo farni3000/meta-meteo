@@ -23,6 +23,9 @@ darstellt.
 - Zoom-Sync: Button „Zoom auf alle“ in jedem Chart überträgt den sichtbaren
   Zeitbereich auf alle anderen Charts; „Zoom zurücksetzen“ stellt die
   Standardansicht wieder her.
+- Favoriten: Ort per Stern hinzufügen/entfernen; Chips rechts neben der Suche,
+  klickbar, per Drag & Drop sortierbar, serverseitig in `data/favorites.json`
+  persistiert.
 - Transparenz: pro Parameter wird angezeigt, welche Modelle tatsächlich eingeflossen
   sind und welche fehlen; Badges für „nur 1 Modell“, „nur täglich aufgelöst“ und
   schwankende Modellanzahl.
@@ -130,6 +133,18 @@ Bei genau einem Modell ist `std = 0`; bei keinem Modell sind `mean`/`std` `null`
 `hourly` und `daily` sind immer beide enthalten, der Umschalter im Frontend arbeitet
 ohne neuen Request.
 
+### Favoriten-Endpoints
+
+| Methode | Pfad | Zweck |
+| --- | --- | --- |
+| `GET` | `/api/favorites` | Liste in gespeicherter Reihenfolge |
+| `POST` | `/api/favorites` | Favorit hinzufügen (Duplikate werden ignoriert) |
+| `DELETE` | `/api/favorites/{id}` | Favorit entfernen (`id` = `lat,lon` auf 4 Stellen) |
+| `PUT` | `/api/favorites/order` | Reihenfolge setzen (`{"ids": [...]}`) |
+
+Alle Endpoints liefern `{"favorites": [...]}`. Gespeichert wird in
+`data/favorites.json` (wird beim ersten Schreiben angelegt, ist gitignored).
+
 ## Konfiguration
 
 `backend/config.py` steuert:
@@ -176,10 +191,11 @@ des Zeitraums und wird im Frontend als „Modellanzahl X–Y“ ausgewiesen.
 meta-meteo/
   backend/
     main.py              # FastAPI-App, Endpoints, Cache, StaticFiles
-    config.py            # Modellauswahl, Parametername-Mapping, TTL
+    config.py            # Modellauswahl, Parametername-Mapping, TTL, Datenpfade
     models.py            # Pydantic-Modelle + NormalizedForecast
     aggregation.py       # Mittelwert/Std, Tagesfallback
     cache.py             # TTL-Cache
+    favorites.py         # FavoritesStore (JSON-Persistenz)
     sources/
       base.py            # ForecastSource(ABC)
       open_meteo.py      # Open-Meteo Forecast Client (ein Request pro Modell)
@@ -187,6 +203,7 @@ meta-meteo/
     tests/
       test_aggregation.py
       test_parameters.py
+      test_favorites.py
   frontend/
     index.html
     app.js

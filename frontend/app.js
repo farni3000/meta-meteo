@@ -85,7 +85,11 @@ const state = {
   data: null,
   selected: null,
   plots: {},
+  favorites: [],
 };
+
+let dragIndex = null;
+let suppressClick = false;
 
 const searchInput = document.getElementById("search");
 const suggestions = document.getElementById("suggestions");
@@ -97,6 +101,7 @@ const modelsPanel = document.getElementById("models-panel");
 const modelsSummary = document.getElementById("models-summary");
 const modelsList = document.getElementById("models-list");
 const resetZoomBtn = document.getElementById("reset-zoom");
+const favoritesEl = document.getElementById("favorites");
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -154,6 +159,155 @@ function renderSuggestions(results) {
 function closeSuggestions() {
   suggestions.classList.remove("open");
   suggestions.innerHTML = "";
+}
+
+function favoriteId(location) {
+  return `${Number(location.latitude).toFixed(4)},${Number(location.longitude).toFixed(4)}`;
+}
+
+function isFavorite(location) {
+  return !!location && state.favorites.some((fav) => fav.id === favoriteId(location));
+}
+
+async function loadFavorites() {
+  try {
+    const response = await fetch("/api/favorites");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    state.favorites = data.favorites || [];
+  } catch (error) {
+    state.favorites = [];
+    setStatus(`Favoriten konnten nicht geladen werden: ${error.message}`, true);
+  }
+  renderFavorites();
+}
+
+function renderFavorites() {
+  favoritesEl.innerHTML = "";
+  if (!state.favorites.length) {
+    const empty = document.createElement("span");
+    empty.className = "favorites-empty";
+    empty.textContent = "Noch keine Favoriten – Ort suchen und mit ☆ hinzufügen.";
+    favoritesEl.appendChild(empty);
+    return;
+  }
+
+  state.favorites.forEach((favorite, index) => {
+    const chip = document.createElement("div");
+    chip.className = "fav-chip";
+    if (state.selected && favoriteId(state.selected) === favorite.id) {
+      chip.classList.add("active");
+    }
+    chip.draggable = true;
+    chip.title = [favorite.admin1, favorite.country].filter(Boolean).join(", ");
+
+    const label = document.createElement("span");
+    label.className = "label";
+    label.textContent = favorite.name;
+    chip.appendChild(label);
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "remove";
+    remove.textContent = "×";
+    remove.title = "Favorit entfernen";
+    remove.addEventListener("click", (event) => removeFavorite(favorite.id, event));
+    chip.appendChild(remove);
+
+    chip.addEventListener("click", () => {
+      if (suppressClick) return;
+      selectLocation(favorite);
+    });
+
+    chip.addEventListener("dragstart", (event) => {
+      dragIndex = index;
+      suppressClick = true;
+      chip.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", favorite.id);
+    });
+    chip.addEventListener("dragend", () => {
+      chip.classList.remove("dragging");
+      dragIndex = null;
+      setTimeout(() => {
+        suppressClick = false;
+      }, 0);
+    });
+    chip.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+    });
+    chip.addEventListener("drop", (event) => {
+      event.preventDefault();
+      if (dragIndex === null || dragIndex === index) return;
+      const moved = state.favorites.splice(dragIndex, 1)[0];
+      state.favorites.splice(index, 0, moved);
+      dragIndex = null;
+      renderFavorites();
+      persistOrder();
+    });
+
+    favoritesEl.appendChild(chip);
+  });
+}
+
+async function toggleFavorite() {
+  if (!state.selected) return;
+  const id = favoriteId(state.selected);
+  try {
+    let response;
+    if (isFavorite(state.selected)) {
+      response = await fetch(`/api/favorites/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+    } else {
+      const { name, country, admin1, latitude, longitude, timezone } = state.selected;
+      response = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, country, admin1, latitude, longitude, timezone }),
+      });
+    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    state.favorites = data.favorites || [];
+    renderFavorites();
+    renderLocationMeta();
+  } catch (error) {
+    setStatus(`Favorit konnte nicht gespeichert werden: ${error.message}`, true);
+  }
+}
+
+async function removeFavorite(id, event) {
+  if (event) event.stopPropagation();
+  try {
+    const response = await fetch(`/api/favorites/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    state.favorites = data.favorites || [];
+    renderFavorites();
+    renderLocationMeta();
+  } catch (error) {
+    setStatus(`Favorit konnte nicht entfernt werden: ${error.message}`, true);
+  }
+}
+
+async function persistOrder() {
+  try {
+    const response = await fetch("/api/favorites/order", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: state.favorites.map((favorite) => favorite.id) }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    state.favorites = data.favorites || [];
+    renderFavorites();
+  } catch (error) {
+    setStatus(`Reihenfolge konnte nicht gespeichert werden: ${error.message}`, true);
+  }
 }
 
 async function selectLocation(location) {
@@ -544,13 +698,27 @@ function renderLocationMeta() {
     `${models_used.length} von ${models_requested.length} Modellen mit Daten`,
     `Aktualisiert: ${new Date(generated_at).toLocaleString("de-DE")}`,
   ];
-  locationMeta.textContent = parts.join(" · ");
+
+  locationMeta.innerHTML = "";
+  const text = document.createElement("span");
+  text.textContent = parts.join(" · ");
+  locationMeta.appendChild(text);
+
+  const alreadyFavorite = isFavorite(state.selected);
+  const star = document.createElement("button");
+  star.type = "button";
+  star.className = alreadyFavorite ? "star-btn on" : "star-btn";
+  star.textContent = alreadyFavorite ? "★ Favorit" : "☆ Favorit";
+  star.title = alreadyFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen";
+  star.addEventListener("click", toggleFavorite);
+  locationMeta.appendChild(star);
 }
 
 function render() {
   renderLocationMeta();
   renderCharts();
   renderModelsPanel();
+  renderFavorites();
   resetZoomBtn.hidden = false;
   windowHint.textContent =
     state.mode === "hourly" ? "Anzeige: erste 3 Tage – für alle 7 Tage zoomen" : "";
@@ -584,3 +752,5 @@ searchInput.addEventListener("keydown", (event) => {
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".search-wrap")) closeSuggestions();
 });
+
+loadFavorites();

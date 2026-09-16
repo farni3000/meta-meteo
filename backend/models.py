@@ -64,3 +64,24 @@ class ForecastResponse(BaseModel):
     models_requested: list[str]
     models_used: list[str]
     generated_at: str
+
+
+class FavoriteCreate(BaseModel):
+    name: str
+    country: Optional[str] = None
+    admin1: Optional[str] = None
+    latitude: float
+    longitude: float
+    timezone: Optional[str] = None
+
+
+class Favorite(FavoriteCreate):
+    id: str
+
+
+class FavoritesResponse(BaseModel):
+    favorites: list[Favorite]
+
+
+class FavoriteOrder(BaseModel):
+    ids: list[str]

@@ -16,11 +16,17 @@ from .config import (
     CACHE_TTL_SECONDS,
     DEFAULT_FORECAST_DAYS,
     DEFAULT_MODELS,
+    FAVORITES_PATH,
     FORECAST_MAX_DAYS,
     HTTP_TIMEOUT_SECONDS,
     settings,
 )
+from .favorites import FavoritesStore, favorite_id
 from .models import (
+    Favorite,
+    FavoriteCreate,
+    FavoriteOrder,
+    FavoritesResponse,
     ForecastResponse,
     GeocodeResponse,
     LocationInfo,
@@ -31,6 +37,7 @@ from .sources.open_meteo import OpenMeteoForecastSource
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 _cache = TTLCache(CACHE_TTL_SECONDS)
+_favorites = FavoritesStore(FAVORITES_PATH)
 
 
 @asynccontextmanager
@@ -130,6 +137,30 @@ async def forecast(
     )
     _cache.set(cache_key, response)
     return response
+
+
+@app.get("/api/favorites", response_model=FavoritesResponse)
+async def list_favorites() -> FavoritesResponse:
+    return FavoritesResponse(favorites=_favorites.list())
+
+
+@app.post("/api/favorites", response_model=FavoritesResponse)
+async def add_favorite(payload: FavoriteCreate) -> FavoritesResponse:
+    favorite = Favorite(
+        id=favorite_id(payload.latitude, payload.longitude),
+        **payload.model_dump(),
+    )
+    return FavoritesResponse(favorites=_favorites.add(favorite))
+
+
+@app.delete("/api/favorites/{favorite_id_value}", response_model=FavoritesResponse)
+async def delete_favorite(favorite_id_value: str) -> FavoritesResponse:
+    return FavoritesResponse(favorites=_favorites.remove(favorite_id_value))
+
+
+@app.put("/api/favorites/order", response_model=FavoritesResponse)
+async def reorder_favorites(payload: FavoriteOrder) -> FavoritesResponse:
+    return FavoritesResponse(favorites=_favorites.reorder(payload.ids))
 
 
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

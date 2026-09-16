@@ -35,9 +35,16 @@
       margin: 0 auto;
       padding: 12px 24px 48px;
     }
+    .search-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
     .search-wrap {
       position: relative;
-      margin: 16px 0;
+      flex: 1 1 320px;
       max-width: 480px;
     }
     #search {
@@ -72,6 +79,41 @@
     .suggestion:last-child { border-bottom: none; }
     .suggestion:hover, .suggestion.active { background: var(--panel-2); }
     .suggestion .meta { color: var(--muted); font-size: 0.8rem; }
+    .favorites {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      flex: 1 1 auto;
+      padding-top: 2px;
+    }
+    .favorites-empty { color: var(--muted); font-size: 0.85rem; }
+    .fav-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px 8px 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      user-select: none;
+    }
+    .fav-chip:hover { border-color: var(--accent); }
+    .fav-chip.active { border-color: var(--accent); color: var(--accent); }
+    .fav-chip.dragging { opacity: 0.4; }
+    .fav-chip .label { pointer-events: none; }
+    .fav-chip .remove {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.95rem;
+      line-height: 1;
+      padding: 0 2px;
+    }
+    .fav-chip .remove:hover { color: var(--error); }
     .toolbar {
       display: flex;
       align-items: center;
@@ -112,7 +154,25 @@
     .btn[hidden] { display: none; }
     #status { color: var(--muted); font-size: 0.9rem; }
     #status.error { color: var(--error); }
-    #location-meta { color: var(--muted); font-size: 0.9rem; }
+    #location-meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .star-btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .star-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .star-btn.on { color: #fbbf24; border-color: #fbbf24; }
     .charts { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px; }
     .chart-card {
       background: var(--panel);
@@ -213,9 +273,12 @@
     <p>7-Tage-Vorhersage als Mittelwert mehrerer Wettermodelle &ndash; mit Streuung als Fehlerband.</p>
   </header>
   <main>
-    <div class="search-wrap">
-      <input id="search" type="text" placeholder="Ort suchen (z. B. Berlin)" autocomplete="off" />
-      <div id="suggestions"></div>
+    <div class="search-row">
+      <div class="search-wrap">
+        <input id="search" type="text" placeholder="Ort suchen (z. B. Berlin)" autocomplete="off" />
+        <div id="suggestions"></div>
+      </div>
+      <div id="favorites" class="favorites"></div>
     </div>
 
     <div class="toolbar">
