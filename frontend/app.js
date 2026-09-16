@@ -591,7 +591,7 @@ function renderChart(param, block, series) {
   }
   const applyZoom = document.createElement("button");
   applyZoom.className = "apply-zoom";
-  applyZoom.textContent = "Zoom auf alle";
+  applyZoom.textContent = "Zoom auf alle anwenden";
   applyZoom.title = "Aktuellen X-Zoom dieses Charts auf alle anderen Charts anwenden";
   applyZoom.addEventListener("click", () => applyRangeToAll(param.key));
   head.appendChild(applyZoom);
