@@ -53,6 +53,10 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   sind `mean`/`std` `null`.
 - **Frontend-Konsolen-/DOM-Änderungen** ohne Build-Schritt: `frontend/app.js`
   wird direkt geladen.
+- **Farbige Zonen im Chart:** Über ein `bands`-Feld am `CHARTS`-Eintrag
+  (`{ from, to, label, color }`) rendert `renderChart` gefüllte Bereiche,
+  Grenzlinien und rechtsbündige Labels; die y-Achse skaliert dazu dynamisch am
+  Datenbereich. Beispiel: die Druckbänder im Luftdruck-Chart.
 - **Datenstart ab jetzt:** `ForecastResponse.now` (Ortszeit, `YYYY-MM-DDTHH:mm`)
   wird pro Request frisch gesetzt. Das Frontend setzt `xaxis.minallowed` auf
   diesen Wert (stündlich) bzw. auf 00:00 heute (täglich), damit vergangene Daten

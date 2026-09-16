@@ -53,7 +53,13 @@ const CHARTS = [
     label: "Luftdruck",
     color: "#c084fc",
     zero: false,
-    info: "Luftdruck auf Meeresniveau in hPa.",
+    info: "Luftdruck auf Meeresniveau in hPa – auf Meeresniveau reduziert und daher höhenunabhängig. Die farbigen Bänder ordnen den Verlauf meteorologisch ein.",
+    bands: [
+      { from: 900, to: 1000, label: "Tiefdruck", color: "#60a5fa" },
+      { from: 1000, to: 1013, label: "Leicht unterdurchschnittlich", color: "#22d3ee" },
+      { from: 1013, to: 1025, label: "Normalbereich", color: "#4ade80" },
+      { from: 1025, to: 1100, label: "Hochdruck", color: "#f59e0b" },
+    ],
   },
 ];
 
@@ -372,12 +378,81 @@ async function selectLocation(location) {
   }
 }
 
-function bandColor(hex) {
+function hexToRgba(hex, alpha) {
   const value = hex.replace("#", "");
   const r = parseInt(value.slice(0, 2), 16);
   const g = parseInt(value.slice(2, 4), 16);
   const b = parseInt(value.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, 0.18)`;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function bandColor(hex) {
+  return hexToRgba(hex, 0.18);
+}
+
+function seriesExtent(series) {
+  let min = Infinity;
+  let max = -Infinity;
+  series.mean.forEach((value, index) => {
+    if (value === null || value === undefined) return;
+    const spread = (series.std && series.std[index]) || 0;
+    min = Math.min(min, value - spread);
+    max = Math.max(max, value + spread);
+  });
+  return isFinite(min) && isFinite(max) ? [min, max] : null;
+}
+
+function bandShapes(bands) {
+  const shapes = bands.map((band) => ({
+    type: "rect",
+    xref: "paper",
+    x0: 0,
+    x1: 1,
+    yref: "y",
+    y0: band.from,
+    y1: band.to,
+    fillcolor: hexToRgba(band.color, 0.12),
+    line: { width: 0 },
+    layer: "below",
+  }));
+  bands.slice(1).forEach((band) => {
+    shapes.push({
+      type: "line",
+      xref: "paper",
+      x0: 0,
+      x1: 1,
+      yref: "y",
+      y0: band.from,
+      y1: band.from,
+      line: { color: hexToRgba(band.color, 0.45), width: 1 },
+      layer: "below",
+    });
+  });
+  return shapes;
+}
+
+function bandAnnotations(bands, range) {
+  const [yMin, yMax] = range;
+  const pad = (yMax - yMin) * 0.06;
+  return bands
+    .filter((band) => band.to >= yMin && band.from <= yMax)
+    .map((band) => {
+      const visibleMin = Math.max(band.from, yMin);
+      const visibleMax = Math.min(band.to, yMax);
+      const center = (visibleMin + visibleMax) / 2;
+      const y = Math.min(Math.max(center, yMin + pad), yMax - pad);
+      return {
+        xref: "paper",
+        x: 0.995,
+        xanchor: "right",
+        yref: "y",
+        y,
+        text: band.label,
+        showarrow: false,
+        font: { size: 10, color: band.color },
+        opacity: 0.9,
+      };
+    });
 }
 
 function buildTraces(x, series, color) {
@@ -679,6 +754,23 @@ function renderChart(param, block, series) {
     }
   }
 
+  let bandRange = null;
+  if (param.bands) {
+    const extent = seriesExtent(series);
+    if (extent) {
+      const pad = Math.max(2, (extent[1] - extent[0]) * 0.12);
+      bandRange = [extent[0] - pad, extent[1] + pad];
+    }
+  }
+
+  const shapes = dayShapes(timestamps, state.mode);
+  if (param.bands) {
+    shapes.push(...bandShapes(param.bands));
+  }
+  if (hasDirection) {
+    shapes.push(...directionShapes());
+  }
+
   const layout = {
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
@@ -702,12 +794,14 @@ function renderChart(param, block, series) {
       title: { text: series.unit || "" },
       rangemode: param.zero ? "tozero" : "normal",
     },
-    shapes: hasDirection
-      ? [...dayShapes(timestamps, state.mode), ...directionShapes()]
-      : dayShapes(timestamps, state.mode),
+    shapes,
   };
   if (hasDirection) {
     layout.yaxis.domain = [0, 0.86];
+  }
+  if (bandRange) {
+    layout.yaxis.range = bandRange;
+    layout.annotations = bandAnnotations(param.bands, bandRange);
   }
   if (xRange) {
     layout.xaxis.range = xRange;

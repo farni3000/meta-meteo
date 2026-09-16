@@ -25,6 +25,11 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   transparenter; Hover zeigt Himmelsrichtung, Grad, Streuung und Modellanzahl.
 - Gestrichelte Overlays: gefühlte Temperatur im Temperatur-Chart, Bewölkung
   (rechte Achse, %) im Sonnenstunden-Chart.
+- Farbige Druckbänder im Luftdruck-Chart: `<1000` Tiefdruck, `1000–1013` leicht
+  unterdurchschnittlich, `1013–1025` Normalbereich, `>1025` Hochdruck – jeweils
+  mit rechtsbündigem Label. Da `pressure_msl` auf Meeresniveau reduziert ist,
+  gelten die Grenzen unabhängig von der Höhenlage des Ortes. Die y-Achse skaliert
+  dynamisch am Datenbereich, sodass nur die relevanten Bänder sichtbar sind.
 - Umschalter „stündlich / täglich“; stündlich startet die Ansicht mit den ersten
   3 Tagen (per Zoom alle 7 Tage).
 - Datenstart ab „jetzt“: Der stündliche Graph beginnt an der aktuellen Minute
