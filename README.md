@@ -35,14 +35,14 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
 - Tages-Kennwerte direkt im Chart: Temperatur, Wind, UV-Index und Luftdruck
   zeigen je Tag den Tageshöchstwert, die Niederschlagsmenge die Tagessumme. Die
   Werte werden immer aus der Stundenreihe (`max` bzw. `sum` je Kalendertag)
-  berechnet, damit sie auch in der Tagesansicht korrekt sind. Jeder Chart nutzt
-  einen eigenen Darstellungsstil (Sprechblase, rahmenloser Zeiger, Pille,
-  Unterstrich, offener Marker) – konfigurierbar über das `annotations`-Feld im
-  jeweiligen `CHARTS`-Eintrag. Die Labels sind dynamisch: je weiter der
-  Tagespeak außen liegt, desto flacher zeigt der Pfeil zur gegenüberliegenden
-  Seite (max. 45°, `standoff` hält Abstand zum Punkt, Wind mit grauem
-  Hintergrund zwischen den Tagesflächen). Diese Pfeil-Positionierung wird bei
-  Zoom/Pan/Reset neu berechnet.
+  berechnet, damit sie auch in der Tagesansicht korrekt sind. Alle fünf Charts
+  nutzen denselben Darstellungsstil: eine graue Box (`#222e40`, zwischen den
+  beiden Tagesflächen) mit farbigem Rand, farbigem Wert und dynamischem Pfeil –
+  konfigurierbar über das `annotations`-Feld im jeweiligen `CHARTS`-Eintrag. Je
+  weiter der Tagespeak außen liegt, desto flacher zeigt der Pfeil zur
+  gegenüberliegenden Seite (max. 45°, `standoff` hält Abstand zum Punkt). Die
+  Box wird über den Pfeilansatz gemalt, damit nichts hineinragt; die
+  Positionierung wird bei Zoom/Pan/Reset neu berechnet.
 - Einheitliche Zahlennotation: alle Werte in Hover-Tooltips und Chart-Annotationen
   werden mit einer Nachkommastelle und mit Einheit ausgegeben (z. B. `23,4 °C`,
   `3,2 mm`). Die Formatierung läuft zentral über `formatNumber`/`formatValue` mit
@@ -213,8 +213,8 @@ Für Winkelgrößen `circular=True` setzen, damit der Vektor-Mittelwert statt de
 arithmetischen Mittels verwendet wird. Soll die Größe als Pfeile in einem
 bestehenden Chart erscheinen, im Frontend-Eintrag `direction: { key, label }`
 ergänzen statt ein eigenes Chart anzulegen. Für einen Tages-Kennwert im Chart
-`annotations: { type: "max" | "sum", style: "bubble" | "caret" | "chip" | "underbar" | "dot" }`
-setzen. Die optionale Ergänzung `dynamicArrow: true` positioniert den Pfeil
+`annotations: { type: "max" | "sum" }` setzen; die Box+Pfeil-Darstellung ist
+einheitlich. Die optionale Ergänzung `dynamicArrow: true` positioniert den Pfeil
 x-abhängig (Pfeil weg von der Mitte, max. 45°) und passt ihn bei Zoom/Pan/Reset
 automatisch an.
 

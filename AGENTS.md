@@ -66,18 +66,19 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   nutzt deshalb vorformatierte Werte in `customdata` statt `%{y:.2f}`, weil
   Plotly sonst einen Punkt als Dezimaltrenner setzt.
 - **Tages-Kennwerte im Chart:** Über ein `annotations`-Feld am `CHARTS`-Eintrag
-  (`{ type: "max" | "sum", style: ... }`). `dailyHighlights` aggregiert dafür
-  stets die **Stundenreihe** aus `state.data.hourly` je Kalendertag (Tagesmaximum
-  bzw. Tagessumme), damit die Werte auch in der Tagesansicht stimmen
-  (`temperature_2m`/`pressure_msl` liegen täglich nur als `_mean` vor). Stile:
-  `bubble`, `caret`, `chip`, `underbar`, `dot`; `caret`/`dot` zeichnen zusätzlich
-  einen Marker-Trace. `computeYRange` schafft Platz für die Labels.
+  (`{ type: "max" | "sum" }`). `dailyHighlights` aggregiert dafür stets die
+  **Stundenreihe** aus `state.data.hourly` je Kalendertag (Tagesmaximum bzw.
+  Tagessumme), damit die Werte auch in der Tagesansicht stimmen
+  (`temperature_2m`/`pressure_msl` liegen täglich nur als `_mean` vor).
+  `valueAnnotations` rendert einheitlich graue Box + farbigen Pfeil;
+  `computeYRange` schafft Platz für die Labels.
 - **Dynamische Pfeile:** `dynamicArrow: true` am `annotations`-Eintrag lässt
   `resolveArrow`/`arrowOffset` den Pfeil x-abhängig neigen (Punkt außen → Label
   zur Mitte, max. 45°, `standoff` hält Abstand zum Punkt). Derzeit für alle
   annotierten Charts aktiv. `chartXContext` liefert die sichtbare x-Spanne;
   `rebuildAnnotations` wird bei Zoom/Pan/Reset über den `plotly_relayout`-Handler
-  neu aufgebaut.
+  neu aufgebaut. `paintAnnotationsUnderBoxes` dreht per `plotly_afterplot` die
+  SVG-Reihenfolge, damit die Box über dem Pfeilansatz liegt.
 
 ## Tests
 

@@ -8,7 +8,7 @@ const CHARTS = [
     overlays: [
       { key: "apparent_temperature", label: "Gefühlte Temperatur", color: "#fca5a5" },
     ],
-    annotations: { type: "max", style: "bubble", dynamicArrow: true },
+    annotations: { type: "max", dynamicArrow: true },
   },
   {
     key: "sunshine_duration",
@@ -27,7 +27,7 @@ const CHARTS = [
     zero: true,
     info: "Windgeschwindigkeit in 10 m Höhe über Grund – die meteorologische Standard-Messhöhe. Wind in 2 m Höhe ist bei Open-Meteo nicht verfügbar. Die Pfeile zeigen die mittlere Strömungsrichtung; blasser = Modelle uneiniger.",
     direction: { key: "wind_direction_10m", label: "Windrichtung" },
-    annotations: { type: "max", style: "chip", dynamicArrow: true },
+    annotations: { type: "max", dynamicArrow: true },
   },
   {
     key: "precipitation_probability",
@@ -42,7 +42,7 @@ const CHARTS = [
     color: "#4ade80",
     zero: true,
     info: "Erwartete Niederschlagsmenge in mm.",
-    annotations: { type: "sum", style: "underbar", dynamicArrow: true },
+    annotations: { type: "sum", dynamicArrow: true },
   },
   {
     key: "uv_index",
@@ -50,7 +50,7 @@ const CHARTS = [
     color: "#facc15",
     zero: true,
     info: "UV-Index (0 = niedrig, ab 3 erhöhter Schutzbedarf, ab 8 sehr hoch).",
-    annotations: { type: "max", style: "caret", dynamicArrow: true },
+    annotations: { type: "max", dynamicArrow: true },
   },
   {
     key: "pressure_msl",
@@ -58,7 +58,7 @@ const CHARTS = [
     color: "#c084fc",
     zero: false,
     info: "Luftdruck auf Meeresniveau in hPa – auf Meeresniveau reduziert und daher höhenunabhängig. Die farbigen Bänder ordnen den Verlauf meteorologisch ein.",
-    annotations: { type: "max", style: "dot", dynamicArrow: true },
+    annotations: { type: "max", dynamicArrow: true },
     bands: [
       { from: 900, to: 1000, label: "Tiefdruck", color: "#60a5fa" },
       { from: 1000, to: 1013, label: "Leicht unterdurchschnittlich", color: "#22d3ee" },
@@ -561,122 +561,36 @@ function resolveArrow(param, x, ctx, baseAy) {
   return { ax: 0, ay: baseAy };
 }
 
-function valueMarkerTrace(param, points) {
-  const style = param.annotations.style;
-  let symbol = null;
-  let open = false;
-  if (style === "caret") {
-    symbol = "triangle-down";
-  } else if (style === "dot") {
-    symbol = "diamond-open";
-    open = true;
-  }
-  if (!symbol) return null;
-  const xs = [];
-  const ys = [];
-  points.forEach((point) => {
-    if (point.value === null || point.value === undefined) return;
-    xs.push(point.x);
-    ys.push(point.value);
-  });
-  if (!xs.length) return null;
-  return {
-    x: xs,
-    y: ys,
-    type: "scatter",
-    mode: "markers",
-    marker: {
-      symbol,
-      size: open ? 9 : 8,
-      color: open ? "rgba(0,0,0,0)" : param.color,
-      line: { color: param.color, width: 1.5 },
-    },
-    hoverinfo: "skip",
-    showlegend: false,
-  };
-}
-
 function valueAnnotations(param, points, ctx) {
-  const style = param.annotations.style;
   return points.map((point) => {
-    const base = {
+    const arrow = resolveArrow(param, point.x, ctx, -28);
+    return {
       x: point.x,
       y: point.value,
       text: point.text,
       xanchor: "center",
-      font: { size: 10, color: "#e2e8f0" },
-    };
-    if (style === "bubble") {
-      const arrow = resolveArrow(param, point.x, ctx, -28);
-      return {
-        ...base,
-        showarrow: true,
-        arrowhead: 2,
-        arrowwidth: 1,
-        arrowcolor: hexToRgba(param.color, 0.8),
-        ...arrow,
-        bgcolor: hexToRgba(param.color, 0.18),
-        bordercolor: hexToRgba(param.color, 0.55),
-        borderwidth: 1,
-        borderpad: 3,
-      };
-    }
-    if (style === "chip") {
-      const arrow = resolveArrow(param, point.x, ctx, -28);
-      return {
-        ...base,
-        showarrow: true,
-        arrowhead: 2,
-        arrowwidth: 1,
-        arrowcolor: hexToRgba(param.color, 0.75),
-        ...arrow,
-        standoff: 6,
-        bgcolor: "rgba(34, 46, 64, 0.95)",
-        bordercolor: hexToRgba(param.color, 0.8),
-        borderwidth: 1,
-        borderpad: 3,
-        font: { size: 10, color: param.color },
-      };
-    }
-    if (style === "caret") {
-      const arrow = resolveArrow(param, point.x, ctx, -26);
-      return {
-        ...base,
-        showarrow: true,
-        arrowhead: 0,
-        arrowwidth: 1,
-        arrowcolor: hexToRgba(param.color, 0.6),
-        ...arrow,
-        standoff: 7,
-        bgcolor: "rgba(0,0,0,0)",
-        font: { size: 10, color: param.color },
-      };
-    }
-    if (style === "underbar") {
-      const arrow = resolveArrow(param, point.x, ctx, 20);
-      return {
-        ...base,
-        showarrow: true,
-        arrowhead: 0,
-        arrowwidth: 1,
-        arrowcolor: hexToRgba(param.color, 0.7),
-        ...arrow,
-        yanchor: "top",
-        bgcolor: "rgba(0,0,0,0)",
-      };
-    }
-    const arrow = resolveArrow(param, point.x, ctx, -26);
-    return {
-      ...base,
       showarrow: true,
-      arrowhead: 0,
+      arrowhead: 2,
       arrowwidth: 1,
-      arrowcolor: hexToRgba(param.color, 0.55),
+      arrowcolor: hexToRgba(param.color, 0.75),
       ...arrow,
-      standoff: 7,
-      bgcolor: "rgba(0,0,0,0)",
-      font: { size: 9, color: param.color },
+      standoff: 6,
+      bgcolor: "rgba(34, 46, 64, 1)",
+      bordercolor: hexToRgba(param.color, 0.8),
+      borderwidth: 1,
+      borderpad: 3,
+      font: { size: 10, color: param.color },
     };
+  });
+}
+
+function paintAnnotationsUnderBoxes(plot) {
+  plot.querySelectorAll("g.annotation").forEach((group) => {
+    const arrow = group.querySelector(".annotation-arrow-g");
+    const text = group.querySelector(".annotation-text-g");
+    if (arrow && text && arrow.previousElementSibling === text) {
+      group.insertBefore(arrow, text);
+    }
   });
 }
 
@@ -1004,10 +918,6 @@ function renderChart(param, block, series) {
   }
 
   const points = param.annotations ? dailyHighlights(param) : [];
-  if (points.length) {
-    const markerTrace = valueMarkerTrace(param, points);
-    if (markerTrace) traces.push(markerTrace);
-  }
 
   let yRange = null;
   if (param.bands) {
@@ -1136,6 +1046,8 @@ function renderChart(param, block, series) {
         }
       }
     });
+    paintAnnotationsUnderBoxes(plot);
+    plot.on("plotly_afterplot", () => paintAnnotationsUnderBoxes(plot));
   });
 
   return card;
