@@ -1,120 +1,110 @@
+const t = (key, vars) => I18n.t(key, vars);
+const locale = () => I18n.locale();
+
 const CHARTS = [
   {
     key: "temperature_2m",
-    label: "Temperatur (2 m)",
+    labelKey: "chart.temperature.label",
+    infoKey: "chart.temperature.info",
     color: "#f97316",
     zero: false,
-    info: "Lufttemperatur in 2 m Höhe über Grund – die meteorologische Standard-Messhöhe.",
     overlays: [
-      { key: "apparent_temperature", label: "Gefühlte Temperatur", color: "#fca5a5" },
+      { key: "apparent_temperature", labelKey: "chart.temperature.overlay", color: "#fca5a5" },
     ],
     annotations: { type: "max", dynamicArrow: true },
   },
   {
     key: "sunshine_duration",
-    label: "Sonnenstunden",
+    labelKey: "chart.sunshine.label",
+    infoKey: "chart.sunshine.info",
     color: "#fbbf24",
     zero: true,
-    info: "Sonnenscheindauer: stündlich = Sonnenstunden dieser Stunde, täglich = Tagessumme. Die gestrichelte Linie zeigt die Bewölkung.",
     overlays: [
-      { key: "cloud_cover", label: "Bewölkung", color: "#94a3b8", secondary: true },
+      { key: "cloud_cover", labelKey: "chart.sunshine.overlay", color: "#94a3b8", secondary: true },
     ],
     annotations: { type: "sum", pinToTop: true },
   },
   {
     key: "wind_speed_10m",
-    label: "Wind (10 m)",
+    labelKey: "chart.wind.label",
+    infoKey: "chart.wind.info",
     color: "#38bdf8",
     zero: true,
-    info: "Windgeschwindigkeit in 10 m Höhe über Grund – die meteorologische Standard-Messhöhe. Wind in 2 m Höhe ist bei Open-Meteo nicht verfügbar. Die Pfeile zeigen die mittlere Strömungsrichtung; blasser = Modelle uneiniger.",
-    direction: { key: "wind_direction_10m", label: "Windrichtung" },
+    direction: { key: "wind_direction_10m", labelKey: "chart.wind.direction" },
     annotations: { type: "max", dynamicArrow: true },
   },
   {
     key: "precipitation_probability",
-    label: "Niederschlagswahrscheinlichkeit",
+    labelKey: "chart.precipProb.label",
+    infoKey: "chart.precipProb.info",
     color: "#818cf8",
     zero: true,
-    info: "Wahrscheinlichkeit für Niederschlag (0–100 %). Nicht jedes Modell liefert diesen Wert.",
     annotations: { type: "max", dynamicArrow: true },
   },
   {
     key: "precipitation",
-    label: "Niederschlagsmenge",
+    labelKey: "chart.precip.label",
+    infoKey: "chart.precip.info",
     color: "#4ade80",
     zero: true,
-    info: "Erwartete Niederschlagsmenge in mm.",
     annotations: { type: "sum" },
   },
   {
     key: "uv_index",
-    label: "UV-Index",
+    labelKey: "chart.uv.label",
+    infoKey: "chart.uv.info",
     color: "#facc15",
     zero: true,
-    info: "UV-Index (0 = niedrig, ab 3 erhöhter Schutzbedarf, ab 8 sehr hoch).",
     annotations: { type: "max", dynamicArrow: true },
   },
   {
     key: "pressure_msl",
-    label: "Luftdruck",
+    labelKey: "chart.pressure.label",
+    infoKey: "chart.pressure.info",
     color: "#c084fc",
     zero: false,
-    info: "Luftdruck auf Meeresniveau in hPa – auf Meeresniveau reduziert und daher höhenunabhängig. Die farbigen Bänder ordnen den Verlauf meteorologisch ein.",
     annotations: { type: "max", dynamicArrow: true },
     bands: [
-      { from: 900, to: 1000, label: "Tiefdruck", color: "#60a5fa" },
-      { from: 1000, to: 1013, label: "Leicht unterdurchschnittlich", color: "#22d3ee" },
-      { from: 1013, to: 1025, label: "Normalbereich", color: "#4ade80" },
-      { from: 1025, to: 1100, label: "Hochdruck", color: "#f59e0b" },
+      { from: 900, to: 1000, labelKey: "band.low", color: "#60a5fa" },
+      { from: 1000, to: 1013, labelKey: "band.slightlyBelow", color: "#22d3ee" },
+      { from: 1013, to: 1025, labelKey: "band.normal", color: "#4ade80" },
+      { from: 1025, to: 1100, labelKey: "band.high", color: "#f59e0b" },
     ],
   },
 ];
 
-const PANEL_PARAMS = [];
-CHARTS.forEach((chart) => {
-  PANEL_PARAMS.push({ key: chart.key, label: chart.label });
-  (chart.overlays || []).forEach((overlay) => {
-    PANEL_PARAMS.push({
-      key: overlay.key,
-      label: overlay.label,
-      note: `gestrichelt im Chart „${chart.label}“`,
+function buildPanelParams() {
+  const params = [];
+  CHARTS.forEach((chart) => {
+    params.push({ key: chart.key, labelKey: chart.labelKey });
+    (chart.overlays || []).forEach((overlay) => {
+      params.push({
+        key: overlay.key,
+        labelKey: overlay.labelKey,
+        noteKey: "panel.noteDashed",
+        chartLabelKey: chart.labelKey,
+      });
     });
+    if (chart.direction) {
+      params.push({
+        key: chart.direction.key,
+        labelKey: chart.direction.labelKey,
+        noteKey: "panel.noteArrows",
+        chartLabelKey: chart.labelKey,
+      });
+    }
   });
-  if (chart.direction) {
-    PANEL_PARAMS.push({
-      key: chart.direction.key,
-      label: chart.direction.label,
-      note: `als Pfeile im Chart „${chart.label}“`,
-    });
-  }
-});
+  return params;
+}
+
+const PANEL_PARAMS = buildPanelParams();
 
 const HOURLY_WINDOW_DAYS = 3;
-
-const CARDINALS = [
-  "N",
-  "NNO",
-  "NO",
-  "ONO",
-  "O",
-  "OSO",
-  "SO",
-  "SSO",
-  "S",
-  "SSW",
-  "SW",
-  "WSW",
-  "W",
-  "WNW",
-  "NW",
-  "NNW",
-];
 
 const DISPLAY_NAMES = {
   icon_seamless: "DWD ICON",
   gfs_seamless: "NOAA GFS",
   ecmwf_ifs025: "ECMWF IFS",
-  gem_seamless: "Kanada GEM",
   ukmo_seamless: "UK Met Office",
   meteofrance_seamless: "Météo-France",
   jma_seamless: "Japan JMA",
@@ -149,14 +139,13 @@ function setStatus(message, isError = false) {
 }
 
 function displayName(model) {
+  if (model === "gem_seamless") return I18n.gemName();
   return DISPLAY_NAMES[model] || model;
 }
 
-const LOCALE = "de-DE";
-
 function formatNumber(value, digits = 1) {
   if (value === null || value === undefined || !isFinite(value)) return "–";
-  return new Intl.NumberFormat(LOCALE, {
+  return new Intl.NumberFormat(locale(), {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(value);
@@ -197,12 +186,16 @@ async function searchLocations(query) {
     return;
   }
   try {
-    const response = await fetch(`/api/geocode?query=${encodeURIComponent(query)}`);
+    const params = new URLSearchParams({
+      query,
+      lang: I18n.getLang(),
+    });
+    const response = await fetch(`/api/geocode?${params.toString()}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     renderSuggestions(data.results || []);
   } catch (error) {
-    setStatus(`Ortssuche fehlgeschlagen: ${error.message}`, true);
+    setStatus(t("status.geocodeError", { message: error.message }), true);
   }
 }
 
@@ -248,7 +241,7 @@ async function loadFavorites() {
     state.favorites = data.favorites || [];
   } catch (error) {
     state.favorites = [];
-    setStatus(`Favoriten konnten nicht geladen werden: ${error.message}`, true);
+    setStatus(t("status.favoritesLoadError", { message: error.message }), true);
   }
   renderFavorites();
 }
@@ -258,7 +251,7 @@ function renderFavorites() {
   if (!state.favorites.length) {
     const empty = document.createElement("span");
     empty.className = "favorites-empty";
-    empty.textContent = "Noch keine Favoriten – Ort suchen und mit ☆ hinzufügen.";
+    empty.textContent = t("favorites.empty");
     favoritesEl.appendChild(empty);
     return;
   }
@@ -281,7 +274,7 @@ function renderFavorites() {
     remove.type = "button";
     remove.className = "remove";
     remove.textContent = "×";
-    remove.title = "Favorit entfernen";
+    remove.title = t("favorites.removeTitle");
     remove.addEventListener("click", (event) => removeFavorite(favorite.id, event));
     chip.appendChild(remove);
 
@@ -345,7 +338,7 @@ async function toggleFavorite() {
     renderFavorites();
     renderLocationMeta();
   } catch (error) {
-    setStatus(`Favorit konnte nicht gespeichert werden: ${error.message}`, true);
+    setStatus(t("status.favoriteSaveError", { message: error.message }), true);
   }
 }
 
@@ -361,7 +354,7 @@ async function removeFavorite(id, event) {
     renderFavorites();
     renderLocationMeta();
   } catch (error) {
-    setStatus(`Favorit konnte nicht entfernt werden: ${error.message}`, true);
+    setStatus(t("status.favoriteRemoveError", { message: error.message }), true);
   }
 }
 
@@ -377,7 +370,7 @@ async function persistOrder() {
     state.favorites = data.favorites || [];
     renderFavorites();
   } catch (error) {
-    setStatus(`Reihenfolge konnte nicht gespeichert werden: ${error.message}`, true);
+    setStatus(t("status.orderSaveError", { message: error.message }), true);
   }
 }
 
@@ -385,7 +378,7 @@ async function selectLocation(location) {
   state.selected = location;
   searchInput.value = location.name;
   closeSuggestions();
-  setStatus("Lade Vorhersage …");
+  setStatus(t("status.loading"));
   try {
     const params = new URLSearchParams({
       lat: location.latitude,
@@ -404,9 +397,10 @@ async function selectLocation(location) {
       throw new Error(detail || `HTTP ${response.status}`);
     }
     state.data = payload;
+    await loadPlotlyLocale(I18n.getLang());
     render();
   } catch (error) {
-    setStatus(`Vorhersage fehlgeschlagen: ${error.message}`, true);
+    setStatus(t("status.forecastError", { message: error.message }), true);
   }
 }
 
@@ -479,7 +473,7 @@ function bandAnnotations(bands, range) {
         xanchor: "right",
         yref: "y",
         y,
-        text: band.label,
+        text: t(band.labelKey),
         showarrow: false,
         font: { size: 10, color: band.color },
         opacity: 0.9,
@@ -672,7 +666,7 @@ function buildTraces(x, series, color) {
       fill: "tonexty",
       fillcolor: bandColor(color),
       hoverinfo: "skip",
-      name: "1σ Abweichung",
+      name: t("chart.legendStd"),
     },
     {
       x,
@@ -681,9 +675,8 @@ function buildTraces(x, series, color) {
       type: "scatter",
       mode: "lines",
       line: { color, width: 2.5 },
-      name: "Mittelwert",
-      hovertemplate:
-        "<b>%{x}</b><br>Mittelwert: %{customdata[0]}<br>%{customdata[1]} Modelle<extra></extra>",
+      name: t("chart.legendMean"),
+      hovertemplate: t("chart.hoverMeanTemplate"),
     },
   ];
 }
@@ -702,18 +695,17 @@ function overlayTrace(x, series, overlay) {
     type: "scatter",
     mode: "lines",
     line: { color: overlay.color, width: 2, dash: "dash" },
-    name: overlay.label,
+    name: t(overlay.labelKey),
     yaxis: overlay.secondary ? "y2" : "y",
-    hovertemplate:
-      `<b>%{x}</b><br>${overlay.label}: %{customdata[0]}` +
-      "<br>%{customdata[1]} Modelle<extra></extra>",
+    hovertemplate: t("chart.hoverOverlayTemplate", { label: t(overlay.labelKey) }),
   };
 }
 
 function toCardinal(degrees) {
   if (degrees === null || degrees === undefined) return "–";
   const normalized = ((degrees % 360) + 360) % 360;
-  return CARDINALS[Math.round(normalized / 22.5) % 16];
+  const cardinals = I18n.cardinals();
+  return cardinals[Math.round(normalized / 22.5) % 16];
 }
 
 function directionTrace(x, series, color, step = 1) {
@@ -758,10 +750,8 @@ function directionTrace(x, series, color, step = 1) {
       opacity: opacities,
       line: { width: 0 },
     },
-    name: "Windrichtung (Pfeile)",
-    hovertemplate:
-      "<b>%{x}</b><br>Wind aus %{customdata[1]} (%{customdata[0]})" +
-      "<br>Streuung: ±%{customdata[2]}<br>%{customdata[3]} Modelle<extra></extra>",
+    name: t("chart.legendDirection"),
+    hovertemplate: t("chart.hoverDirectionTemplate"),
   };
 }
 
@@ -880,20 +870,20 @@ function renderChart(param, block, series) {
   head.className = "chart-head";
   const title = document.createElement("span");
   title.className = "chart-title";
-  title.textContent = param.label;
+  title.textContent = t(param.labelKey);
   head.appendChild(title);
-  if (param.info) {
+  if (param.infoKey) {
     const info = document.createElement("span");
     info.className = "info";
     info.textContent = "i";
-    info.title = param.info;
-    info.setAttribute("aria-label", param.info);
+    info.title = t(param.infoKey);
+    info.setAttribute("aria-label", t(param.infoKey));
     head.appendChild(info);
   }
   const applyZoom = document.createElement("button");
   applyZoom.className = "apply-zoom";
-  applyZoom.textContent = "Zoom auf alle anwenden";
-  applyZoom.title = "Aktuellen X-Zoom dieses Charts auf alle anderen Charts anwenden";
+  applyZoom.textContent = t("chart.applyZoom");
+  applyZoom.title = t("chart.applyZoomTitle");
   applyZoom.addEventListener("click", () => applyRangeToAll(param.key));
   head.appendChild(applyZoom);
   card.appendChild(head);
@@ -903,20 +893,23 @@ function renderChart(param, block, series) {
   if (series.resolution !== state.mode) {
     const badge = document.createElement("span");
     badge.className = "badge";
-    badge.textContent = "nur täglich aufgelöst";
+    badge.textContent = t("badge.dailyOnly");
     badges.appendChild(badge);
   }
   if (series.models_used.length === 1) {
     const badge = document.createElement("span");
     badge.className = "badge";
-    badge.textContent = "nur 1 Modell";
+    badge.textContent = t("badge.singleModel");
     badges.appendChild(badge);
   }
   const counts = series.model_count || [];
   if (counts.length && Math.min(...counts) < Math.max(...counts)) {
     const badge = document.createElement("span");
     badge.className = "badge";
-    badge.textContent = `Modellanzahl ${Math.min(...counts)}–${Math.max(...counts)}`;
+    badge.textContent = t("badge.modelCount", {
+      min: Math.min(...counts),
+      max: Math.max(...counts),
+    });
     badges.appendChild(badge);
   }
   card.appendChild(badges);
@@ -998,7 +991,7 @@ function renderChart(param, block, series) {
       type: "date",
       nticks: 7,
       automargin: true,
-      tickformat: state.mode === "hourly" ? "%d.%m. %Hh" : "%a %d.%m.",
+      tickformat: I18n.tickFormat(state.mode),
       tickangle: state.mode === "hourly" ? -45 : 0,
       minallowed: bound || undefined,
       maxallowed: timestamps.length
@@ -1057,6 +1050,7 @@ function renderChart(param, block, series) {
   Plotly.newPlot(plot, traces, layout, {
     responsive: true,
     displaylogo: false,
+    locale: I18n.getLang(),
     modeBarButtonsToRemove: ["lasso2d", "select2d"],
   }).then(() => {
     const autoRange =
@@ -1114,7 +1108,7 @@ function renderCharts() {
   });
   if (!rendered.length) {
     const empty = document.createElement("p");
-    empty.textContent = "Keine Daten für diese Auflösung verfügbar.";
+    empty.textContent = t("status.noData");
     chartsEl.appendChild(empty);
   } else {
     rendered.forEach((card) => chartsEl.appendChild(card));
@@ -1123,9 +1117,10 @@ function renderCharts() {
 
 function renderModelsPanel() {
   const { models_requested } = state.data;
-  modelsSummary.textContent =
-    `Abgefragt für diesen Ort: ${models_requested.map(displayName).join(", ")} ` +
-    `(${models_requested.length} Modelle).`;
+  modelsSummary.textContent = t("models.summary", {
+    models: models_requested.map(displayName).join(", "),
+    count: models_requested.length,
+  });
 
   modelsList.innerHTML = "";
   const block = state.data[state.mode];
@@ -1137,24 +1132,30 @@ function renderModelsPanel() {
 
     const name = document.createElement("span");
     name.className = "name";
-    name.textContent = param.note ? `${param.label} (${param.note})` : param.label;
+    name.textContent = param.noteKey
+      ? `${t(param.labelKey)} (${t(param.noteKey, { chart: t(param.chartLabelKey) })})`
+      : t(param.labelKey);
 
     const models = document.createElement("span");
     models.className = "models";
 
     const used = document.createElement("span");
     used.textContent = series.models_used.length
-      ? `${series.models_used.length} von ${models_requested.length}: ${series.models_used
-          .map(displayName)
-          .join(", ")}`
-      : `0 von ${models_requested.length}: keine Daten`;
+      ? t("models.used", {
+          used: series.models_used.length,
+          total: models_requested.length,
+          models: series.models_used.map(displayName).join(", "),
+        })
+      : t("models.none", { total: models_requested.length });
     models.appendChild(used);
 
     const missing = models_requested.filter((model) => !series.models_used.includes(model));
     if (missing.length) {
       const missingEl = document.createElement("span");
       missingEl.className = "missing";
-      missingEl.textContent = `nicht geliefert: ${missing.map(displayName).join(", ")}`;
+      missingEl.textContent = t("models.missing", {
+        models: missing.map(displayName).join(", "),
+      });
       models.appendChild(missingEl);
     }
 
@@ -1162,9 +1163,10 @@ function renderModelsPanel() {
     if (counts.length && Math.min(...counts) < Math.max(...counts)) {
       const coverage = document.createElement("span");
       coverage.className = "coverage";
-      coverage.textContent = `Modellanzahl über den Zeitraum: ${Math.min(...counts)}–${Math.max(
-        ...counts
-      )}`;
+      coverage.textContent = t("models.coverage", {
+        min: Math.min(...counts),
+        max: Math.max(...counts),
+      });
       models.appendChild(coverage);
     }
 
@@ -1179,8 +1181,13 @@ function renderLocationMeta() {
   const place = [location.name, location.admin1, location.country].filter(Boolean).join(", ");
   const parts = [
     place,
-    `${models_used.length} von ${models_requested.length} Modellen mit Daten`,
-    `Aktualisiert: ${new Date(generated_at).toLocaleString("de-DE")}`,
+    t("location.modelsWithData", {
+      used: models_used.length,
+      total: models_requested.length,
+    }),
+    t("location.updated", {
+      datetime: new Date(generated_at).toLocaleString(locale()),
+    }),
   ];
 
   locationMeta.innerHTML = "";
@@ -1192,8 +1199,8 @@ function renderLocationMeta() {
   const star = document.createElement("button");
   star.type = "button";
   star.className = alreadyFavorite ? "star-btn on" : "star-btn";
-  star.textContent = alreadyFavorite ? "★ Favorit" : "☆ Favorit";
-  star.title = alreadyFavorite ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen";
+  star.textContent = alreadyFavorite ? t("location.starOn") : t("location.starOff");
+  star.title = alreadyFavorite ? t("location.starOnTitle") : t("location.starOffTitle");
   star.addEventListener("click", toggleFavorite);
   locationMeta.appendChild(star);
 }
@@ -1204,10 +1211,58 @@ function render() {
   renderModelsPanel();
   renderFavorites();
   resetZoomBtn.hidden = false;
-  windowHint.textContent =
-    state.mode === "hourly" ? "Anzeige ab jetzt: erste 3 Tage – für alle 7 Tage zoomen" : "";
-  setStatus("Fertig.");
+  windowHint.textContent = state.mode === "hourly" ? t("window.hint") : "";
+  setStatus(t("status.ready"));
 }
+
+const plotlyLocalePromises = {};
+
+function loadPlotlyLocale(lang) {
+  if (lang === "en" || typeof Plotly === "undefined") return Promise.resolve();
+  if (plotlyLocalePromises[lang]) return plotlyLocalePromises[lang];
+  const promise = new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = `https://cdn.plot.ly/plotly-locale-${lang}-2.35.2.js`;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => resolve();
+    document.head.appendChild(script);
+  });
+  plotlyLocalePromises[lang] = promise;
+  return promise;
+}
+
+function applyStaticTranslations() {
+  document.documentElement.lang = I18n.getLang();
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+}
+
+const languageSelect = document.getElementById("language-select");
+I18n.languages.forEach(({ code, name }) => {
+  const option = document.createElement("option");
+  option.value = code;
+  option.textContent = name;
+  languageSelect.appendChild(option);
+});
+
+async function changeLanguage(lang) {
+  if (!I18n.setLang(lang)) return;
+  languageSelect.value = I18n.getLang();
+  await loadPlotlyLocale(I18n.getLang());
+  applyStaticTranslations();
+  if (state.data) {
+    render();
+  } else {
+    renderFavorites();
+  }
+}
+
+languageSelect.addEventListener("change", (event) => changeLanguage(event.target.value));
 
 resetZoomBtn.addEventListener("click", resetZoom);
 
@@ -1237,4 +1292,7 @@ document.addEventListener("click", (event) => {
   if (!event.target.closest(".search-wrap")) closeSuggestions();
 });
 
+applyStaticTranslations();
+languageSelect.value = I18n.getLang();
+loadPlotlyLocale(I18n.getLang());
 loadFavorites();

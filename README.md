@@ -55,8 +55,15 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
 - Einheitliche Zahlennotation: alle Werte in Hover-Tooltips und Chart-Annotationen
   werden mit einer Nachkommastelle und mit Einheit ausgegeben (z. B. `23,4 °C`,
   `3,2 mm`). Die Formatierung läuft zentral über `formatNumber`/`formatValue` mit
-  `LOCALE = "de-DE"` in `frontend/app.js` und ist damit Vorbereitung für spätere
-  internationale Versionen.
+  der sprachabhängigen Locale in `frontend/app.js`.
+- Mehrsprachige Oberfläche: Deutsch, Englisch, Französisch, Spanisch und
+  Italienisch, oben im Header umschaltbar. Der Default kommt aus der
+  Browsersprache, die Auswahl wird in `localStorage` (`metameteo.lang`)
+  gespeichert. Beim Umschalten werden alle Texte sowie Zahlen- und Datumsformate
+  live übersetzt – ohne Reload und ohne neuen Forecast-Request (die Daten selbst
+  sind sprachunabhängig). Einheiten bleiben in jeder Sprache gleich (kein
+  Fahrenheit o. Ä.). Die Übersetzungen und Formatdefinitionen liegen zentral in
+  `frontend/i18n.js`.
 - Datenstart ab „jetzt“: Der stündliche Graph beginnt an der aktuellen Minute
   (Ortszeit des Ortes). Eine harte Achsengrenze (`xaxis.minallowed`) verhindert,
   dass vergangene Stunden – auch per Zoom oder Pan – sichtbar werden. Der
@@ -72,6 +79,32 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   schwankende Modellanzahl.
 - Kurzlebiger In-Memory-Cache (TTL 10 Minuten), Key = Koordinaten + Modellauswahl.
 - Kein Scheduler, kein Scraping, kein API-Key, kein LLM zur Laufzeit.
+
+## Sprachen und Zahlenformate
+
+Die Oberfläche läuft in fünf Sprachen; die Auswahl steht oben rechts und wird in
+`localStorage` gespeichert. Beim ersten Besuch entscheidet die Browsersprache
+(`navigator.languages`), sonst Englisch.
+
+| Sprache | Locale | Dezimaltrenner | Beispiel (1013,2 hPa) |
+| --- | --- | --- | --- |
+| Deutsch | `de-DE` | Komma | `1.013,2` |
+| Englisch | `en-GB` | Punkt | `1,013.2` |
+| Französisch | `fr-FR` | Komma | `1 013,2` |
+| Spanisch | `es-ES` | Komma | `1013,2` |
+| Italienisch | `it-IT` | Komma | `1013,2` |
+
+Nur Englisch verwendet den Punkt als Dezimaltrenner. Die Zahlen kommen aus
+`Intl.NumberFormat`, die Datumsformate (Chart-Achse, Hover, „Aktualisiert“) aus
+der jeweiligen Locale; für die Plotly-Hover werden zusätzlich die
+Locale-Bundles von der Plotly-CDN geladen. Bei vierstelligen Werten gruppieren
+Spanisch und Italienisch standardkonform nicht (`1013,2` statt `1.013,2`); das
+ist CLDR-Verhalten und bewusst so belassen.
+
+Eine neue Sprache ergänzen: Eintrag in `TRANSLATIONS`, `LOCALES`, `CARDINALS`,
+`TICK_FORMATS` und `LANGUAGES` in `frontend/i18n.js` (alle Schlüssel müssen
+vorhanden sein) sowie die Sprache in `GEOCODE_LANGUAGES` in `backend/config.py`
+für lokalisierte Ortsnamen. Das Frontend baut die Auswahl automatisch daraus auf.
 
 ## Setup
 
@@ -132,6 +165,7 @@ Ortszeit-Berechnung (`now`) inkl. UTC-Fallback.
 | --- | --- |
 | `query` | Suchbegriff (Pflicht) |
 | `count` | Max. Treffer, 1–20 (Default 8) |
+| `lang` | Sprache der Ortsnamen: `de`, `en`, `fr`, `es`, `it` (Default `de`) |
 
 Liefert eine Liste möglicher Orte (`name`, `country`, `admin1`, `latitude`,
 `longitude`, `timezone`) zur Disambiguierung.
@@ -267,6 +301,7 @@ meta-meteo/
       test_local_now.py
   frontend/
     index.html
+    i18n.js              # Übersetzungen, Spracherkennung, Locale/Kardinalrichtungen
     app.js
   requirements.txt
   pytest.ini

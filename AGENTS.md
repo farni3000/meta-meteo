@@ -27,7 +27,8 @@ backend/
     base.py        # ForecastSource(ABC)
   tests/           # pytest, laufen über backend/tests
 frontend/
-  index.html       # Layout + CSS, lädt Plotly per CDN
+  index.html       # Layout + CSS, lädt Plotly per CDN; Sprach-Select, data-i18n-Attribute
+  i18n.js          # Übersetzungen (de/en/fr/es/it), detectLang, t(), Locale, Kardinalrichtungen
   app.js           # Chart-Konfiguration (CHARTS), Rendering, Favoriten, Zoom-Sync
 ```
 
@@ -61,10 +62,19 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   wird pro Request frisch gesetzt. Das Frontend setzt `xaxis.minallowed` auf
   diesen Wert (stündlich) bzw. auf 00:00 heute (täglich), damit vergangene Daten
   auch per Zoom/Pan unsichtbar bleiben.
+- **Internationalisierung:** Keine UI-Strings direkt im Code – neue Texte als Key
+  in allen fünf Sprachen in `frontend/i18n.js` (`TRANSLATIONS`), Abruf über `t()`
+  (Interpolation mit `{{var}}`). `CHARTS` nutzt `labelKey`/`infoKey` (Overlays,
+  `direction`, `bands` analog), Auflösung erst beim Rendern. Sprache: Default aus
+  `navigator.languages`, Persistenz in `localStorage["metameteo.lang"]`; Wechsel
+  übersetzt live ohne neuen Request (`changeLanguage` → `render()`). Sprache
+  spezifisch außerdem `LOCALES`, `CARDINALS`, `TICK_FORMATS`, `gemName()`.
 - **Zahlenformat:** Immer über `formatNumber`/`formatValue` in `frontend/app.js`
-  (Konstante `LOCALE = "de-DE"`, eine Nachkommastelle, Einheit). Plotly-Hover
+  (Locale aus `I18n.locale()`, eine Nachkommastelle, Einheit). Plotly-Hover
   nutzt deshalb vorformatierte Werte in `customdata` statt `%{y:.2f}`, weil
-  Plotly sonst einen Punkt als Dezimaltrenner setzt.
+  Plotly sonst einen Punkt als Dezimaltrenner setzt. Datums-Ticks über
+  `I18n.tickFormat(mode)`, Hover-Datum über die Plotly-Locale (`locale` in der
+  `Plotly.newPlot`-Config, Bundle von der Plotly-CDN via `loadPlotlyLocale`).
 - **Tages-Kennwerte im Chart:** Über ein `annotations`-Feld am `CHARTS`-Eintrag
   (`{ type: "max" | "sum" }`). `dailyHighlights` aggregiert dafür stets die
   **Stundenreihe** aus `state.data.hourly` je Kalendertag (Tagesmaximum bzw.

@@ -31,8 +31,25 @@
     .brand {
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .brand-id {
+      display: flex;
+      align-items: center;
       gap: 14px;
     }
+    .lang-select {
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      color: var(--text);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .lang-select:hover, .lang-select:focus { outline: none; border-color: var(--accent); }
     .brand-logo {
       width: 52px;
       height: 52px;
@@ -300,6 +317,7 @@
 <body>
   <header>
     <div class="brand">
+      <div class="brand-id">
       <span class="brand-logo" aria-hidden="true">
         <svg viewBox="0 0 48 48" focusable="false">
           <defs>
@@ -324,14 +342,16 @@
       </span>
       <div class="brand-titles">
         <h1 class="brand-text">MetaMeteo</h1>
-        <p>Stündliche Vorhersage als Mittelwert mehrerer Wettermodelle &ndash; mit Streuung als Fehlerband.</p>
+        <p data-i18n="brand.tagline">Stündliche Vorhersage als Mittelwert mehrerer Wettermodelle &ndash; mit Streuung als Fehlerband.</p>
       </div>
+      </div>
+      <select id="language-select" class="lang-select" aria-label="Sprache / Language"></select>
     </div>
   </header>
   <main>
     <div class="search-row">
       <div class="search-wrap">
-        <input id="search" type="text" placeholder="Ort suchen (z. B. Berlin)" autocomplete="off" />
+        <input id="search" type="text" data-i18n-placeholder="search.placeholder" placeholder="Ort suchen (z. B. Berlin)" autocomplete="off" />
         <div id="suggestions"></div>
       </div>
       <div id="favorites" class="favorites"></div>
@@ -339,11 +359,11 @@
 
     <div class="toolbar">
       <div class="toggle" id="resolution-toggle">
-        <button data-mode="hourly" class="active">stündlich</button>
-        <button data-mode="daily">täglich</button>
+        <button data-mode="hourly" class="active" data-i18n="mode.hourly">stündlich</button>
+        <button data-mode="daily" data-i18n="mode.daily">täglich</button>
       </div>
       <span id="window-hint"></span>
-      <button id="reset-zoom" class="btn" hidden>Zoom für alle zurücksetzen</button>
+      <button id="reset-zoom" class="btn" data-i18n="toolbar.resetZoom" hidden>Zoom für alle zurücksetzen</button>
       <span id="status"></span>
     </div>
     <div id="location-meta"></div>
@@ -351,11 +371,12 @@
     <div class="charts" id="charts"></div>
 
     <div class="panel" id="models-panel" hidden>
-      <h2>Genutzte Modelle je Parameter</h2>
+      <h2 data-i18n="models.title">Genutzte Modelle je Parameter</h2>
       <p id="models-summary"></p>
       <div id="models-list"></div>
     </div>
   </main>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

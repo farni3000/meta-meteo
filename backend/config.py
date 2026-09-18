@@ -85,6 +85,9 @@ DISPLAY_NAMES: dict[str, str] = {
 FORECAST_API_URL = "https://api.open-meteo.com/v1/forecast"
 GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
 
+DEFAULT_GEOCODE_LANGUAGE = "de"
+GEOCODE_LANGUAGES = {"de", "en", "fr", "es", "it"}
+
 FORECAST_MAX_DAYS = 16
 DEFAULT_FORECAST_DAYS = 7
 CACHE_TTL_SECONDS = 600

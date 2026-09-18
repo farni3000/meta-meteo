@@ -16,9 +16,11 @@ from .cache import TTLCache
 from .config import (
     CACHE_TTL_SECONDS,
     DEFAULT_FORECAST_DAYS,
+    DEFAULT_GEOCODE_LANGUAGE,
     DEFAULT_MODELS,
     FAVORITES_PATH,
     FORECAST_MAX_DAYS,
+    GEOCODE_LANGUAGES,
     HTTP_TIMEOUT_SECONDS,
     settings,
 )
@@ -65,9 +67,12 @@ async def disable_frontend_cache(request, call_next):
 async def geocode(
     query: str = Query(..., min_length=1),
     count: int = Query(8, ge=1, le=20),
+    lang: str = Query(DEFAULT_GEOCODE_LANGUAGE),
 ) -> GeocodeResponse:
+    if lang not in GEOCODE_LANGUAGES:
+        lang = DEFAULT_GEOCODE_LANGUAGE
     try:
-        results = await app.state.geocoder.search(query, count=count)
+        results = await app.state.geocoder.search(query, count=count, language=lang)
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"Geocoding fehlgeschlagen: {exc}") from exc
     return GeocodeResponse(results=results)
