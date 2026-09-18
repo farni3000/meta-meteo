@@ -8,7 +8,7 @@ const CHARTS = [
     overlays: [
       { key: "apparent_temperature", label: "Gefühlte Temperatur", color: "#fca5a5" },
     ],
-    annotations: { type: "max", style: "bubble" },
+    annotations: { type: "max", style: "bubble", dynamicArrow: true },
   },
   {
     key: "sunshine_duration",
@@ -42,7 +42,7 @@ const CHARTS = [
     color: "#4ade80",
     zero: true,
     info: "Erwartete Niederschlagsmenge in mm.",
-    annotations: { type: "sum", style: "underbar" },
+    annotations: { type: "sum", style: "underbar", dynamicArrow: true },
   },
   {
     key: "uv_index",
@@ -50,7 +50,7 @@ const CHARTS = [
     color: "#facc15",
     zero: true,
     info: "UV-Index (0 = niedrig, ab 3 erhöhter Schutzbedarf, ab 8 sehr hoch).",
-    annotations: { type: "max", style: "caret" },
+    annotations: { type: "max", style: "caret", dynamicArrow: true },
   },
   {
     key: "pressure_msl",
@@ -58,7 +58,7 @@ const CHARTS = [
     color: "#c084fc",
     zero: false,
     info: "Luftdruck auf Meeresniveau in hPa – auf Meeresniveau reduziert und daher höhenunabhängig. Die farbigen Bänder ordnen den Verlauf meteorologisch ein.",
-    annotations: { type: "max", style: "dot" },
+    annotations: { type: "max", style: "dot", dynamicArrow: true },
     bands: [
       { from: 900, to: 1000, label: "Tiefdruck", color: "#60a5fa" },
       { from: 1000, to: 1013, label: "Leicht unterdurchschnittlich", color: "#22d3ee" },
@@ -598,7 +598,7 @@ function valueMarkerTrace(param, points) {
 
 function valueAnnotations(param, points, ctx) {
   const style = param.annotations.style;
-  return points.map((point, index) => {
+  return points.map((point) => {
     const base = {
       x: point.x,
       y: point.value,
@@ -639,10 +639,15 @@ function valueAnnotations(param, points, ctx) {
       };
     }
     if (style === "caret") {
+      const arrow = resolveArrow(param, point.x, ctx, -26);
       return {
         ...base,
-        showarrow: false,
-        yshift: 18,
+        showarrow: true,
+        arrowhead: 0,
+        arrowwidth: 1,
+        arrowcolor: hexToRgba(param.color, 0.6),
+        ...arrow,
+        standoff: 7,
         bgcolor: "rgba(0,0,0,0)",
         font: { size: 10, color: param.color },
       };
@@ -660,10 +665,15 @@ function valueAnnotations(param, points, ctx) {
         bgcolor: "rgba(0,0,0,0)",
       };
     }
+    const arrow = resolveArrow(param, point.x, ctx, -26);
     return {
       ...base,
-      showarrow: false,
-      yshift: index % 2 === 0 ? 16 : -18,
+      showarrow: true,
+      arrowhead: 0,
+      arrowwidth: 1,
+      arrowcolor: hexToRgba(param.color, 0.55),
+      ...arrow,
+      standoff: 7,
       bgcolor: "rgba(0,0,0,0)",
       font: { size: 9, color: param.color },
     };

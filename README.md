@@ -38,12 +38,11 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   berechnet, damit sie auch in der Tagesansicht korrekt sind. Jeder Chart nutzt
   einen eigenen Darstellungsstil (Sprechblase, rahmenloser Zeiger, Pille,
   Unterstrich, offener Marker) – konfigurierbar über das `annotations`-Feld im
-  jeweiligen `CHARTS`-Eintrag. Im Wind-Chart ist die Pille zudem dynamisch: je
-  weiter der Tagespeak außen liegt, desto flacher zeigt der Pfeil zur
-  gegenüberliegenden Seite (max. 45°, grauer Hintergrund zwischen den
-  Tagesflächen, Pfeil endet per `standoff` kurz vor dem Punkt). Diese
-  Pfeil-Positionierung ist über `dynamicArrow: true` generisch für alle Stile
-  nutzbar und wird bei Zoom/Pan/Reset neu berechnet.
+  jeweiligen `CHARTS`-Eintrag. Die Labels sind dynamisch: je weiter der
+  Tagespeak außen liegt, desto flacher zeigt der Pfeil zur gegenüberliegenden
+  Seite (max. 45°, `standoff` hält Abstand zum Punkt, Wind mit grauem
+  Hintergrund zwischen den Tagesflächen). Diese Pfeil-Positionierung wird bei
+  Zoom/Pan/Reset neu berechnet.
 - Einheitliche Zahlennotation: alle Werte in Hover-Tooltips und Chart-Annotationen
   werden mit einer Nachkommastelle und mit Einheit ausgegeben (z. B. `23,4 °C`,
   `3,2 mm`). Die Formatierung läuft zentral über `formatNumber`/`formatValue` mit
