@@ -32,17 +32,21 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   dynamisch am Datenbereich, sodass nur die relevanten Bänder sichtbar sind.
 - Umschalter „stündlich / täglich“; stündlich startet die Ansicht mit den ersten
   3 Tagen (per Zoom alle 7 Tage).
-- Tages-Kennwerte direkt im Chart: Temperatur, Wind, UV-Index und Luftdruck
-  zeigen je Tag den Tageshöchstwert, die Niederschlagsmenge die Tagessumme. Die
-  Werte werden immer aus der Stundenreihe (`max` bzw. `sum` je Kalendertag)
-  berechnet, damit sie auch in der Tagesansicht korrekt sind. Alle fünf Charts
-  nutzen denselben Darstellungsstil: eine graue Box (`#222e40`, zwischen den
-  beiden Tagesflächen) mit farbigem Rand, farbigem Wert und dynamischem Pfeil –
-  konfigurierbar über das `annotations`-Feld im jeweiligen `CHARTS`-Eintrag. Je
-  weiter der Tagespeak außen liegt, desto flacher zeigt der Pfeil zur
-  gegenüberliegenden Seite (max. 45°, `standoff` hält Abstand zum Punkt). Die
-  Box wird über den Pfeilansatz gemalt, damit nichts hineinragt; die
-  Positionierung wird bei Zoom/Pan/Reset neu berechnet.
+- Tages-Kennwerte direkt im Chart: Temperatur, Wind, UV-Index,
+  Niederschlagswahrscheinlichkeit und Luftdruck zeigen je Tag den
+  Tageshöchstwert, die Niederschlagsmenge die Tagessumme. Die Werte werden immer
+  aus der Stundenreihe (`max` bzw. `sum` je Kalendertag) berechnet, damit sie
+  auch in der Tagesansicht korrekt sind. Max-Charts nutzen eine graue Box
+  (`#222e40`) mit farbigem Rand, farbigem Wert und dynamischem Pfeil – je weiter
+  der Tagespeak außen liegt, desto flacher zeigt der Pfeil zur gegenüberliegenden
+  Seite (max. 45°, `standoff` hält Abstand zum Punkt); die Box wird über den
+  Pfeilansatz gemalt und bei Zoom/Pan/Reset neu berechnet. Die Summen-Box der
+  Niederschlagsmenge sitzt ohne Pfeil mittig im Tag. Vom angebrochenen (ersten)
+  Tag erscheinen im stündlichen Modus nur die verbleibenden Stunden und nur dann,
+  wenn noch mehr als drei Stunden übrig sind; Wert und Position beziehen sich
+  dann auf den sichtbaren Rest. Im täglichen Modus wird der volle Tag verwendet.
+  Alles ist über das `annotations`-Feld im jeweiligen `CHARTS`-Eintrag
+  konfigurierbar.
 - Einheitliche Zahlennotation: alle Werte in Hover-Tooltips und Chart-Annotationen
   werden mit einer Nachkommastelle und mit Einheit ausgegeben (z. B. `23,4 °C`,
   `3,2 mm`). Die Formatierung läuft zentral über `formatNumber`/`formatValue` mit
@@ -213,10 +217,10 @@ Für Winkelgrößen `circular=True` setzen, damit der Vektor-Mittelwert statt de
 arithmetischen Mittels verwendet wird. Soll die Größe als Pfeile in einem
 bestehenden Chart erscheinen, im Frontend-Eintrag `direction: { key, label }`
 ergänzen statt ein eigenes Chart anzulegen. Für einen Tages-Kennwert im Chart
-`annotations: { type: "max" | "sum" }` setzen; die Box+Pfeil-Darstellung ist
-einheitlich. Die optionale Ergänzung `dynamicArrow: true` positioniert den Pfeil
-x-abhängig (Pfeil weg von der Mitte, max. 45°) und passt ihn bei Zoom/Pan/Reset
-automatisch an.
+`annotations: { type: "max" | "sum" }` setzen. `max` zeigt den Tageshöchstwert am
+Ort des Peaks mit Pfeil (optional `dynamicArrow: true` für x-abhängige Neigung,
+max. 45°, Neuberechnung bei Zoom/Pan/Reset); `sum` die Tagessumme ohne Pfeil,
+mittig im Tag.
 
 ## Bekannte Einschränkung: UV-Index
 

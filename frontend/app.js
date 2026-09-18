@@ -35,6 +35,7 @@ const CHARTS = [
     color: "#818cf8",
     zero: true,
     info: "Wahrscheinlichkeit für Niederschlag (0–100 %). Nicht jedes Modell liefert diesen Wert.",
+    annotations: { type: "max", dynamicArrow: true },
   },
   {
     key: "precipitation",
@@ -42,7 +43,7 @@ const CHARTS = [
     color: "#4ade80",
     zero: true,
     info: "Erwartete Niederschlagsmenge in mm.",
-    annotations: { type: "sum", dynamicArrow: true },
+    annotations: { type: "sum" },
   },
   {
     key: "uv_index",
@@ -485,11 +486,21 @@ function bandAnnotations(bands, range) {
     });
 }
 
-function dailyHighlights(param) {
+function localMs(value) {
+  const [datePart, timePart = "00:00"] = value.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+  return Date.UTC(year, month - 1, day, hour, minute);
+}
+
+function dailyHighlights(param, context) {
   const hourly = state.data.hourly;
   const source = hourly && hourly.parameters && hourly.parameters[param.key];
   if (!source || !source.mean || !source.mean.length) return [];
   const unit = source.unit || "";
+  const mode = context && context.mode;
+  const bound = context && context.bound;
+  const startedDay = mode === "hourly" && bound ? bound.slice(0, 10) : null;
   const groups = new Map();
   hourly.timestamps.forEach((timestamp, index) => {
     const value = source.mean[index];
@@ -497,22 +508,36 @@ function dailyHighlights(param) {
     const day = timestamp.slice(0, 10);
     let group = groups.get(day);
     if (!group) {
-      group = { day, max: -Infinity, maxX: null, sum: 0 };
+      group = { day, entries: [] };
       groups.set(day, group);
     }
-    if (value > group.max) {
-      group.max = value;
-      group.maxX = timestamp;
-    }
-    group.sum += value;
+    group.entries.push({ timestamp, value });
   });
-  const type = param.annotations.type;
-  return Array.from(groups.values())
+  const highlights = [];
+  Array.from(groups.values())
     .sort((a, b) => a.day.localeCompare(b.day))
-    .map((group) => {
-      const value = type === "sum" ? group.sum : group.max;
-      return { day: group.day, x: group.maxX, value, text: formatValue(value, unit) };
+    .forEach((group) => {
+      let entries = group.entries;
+      if (group.day === startedDay) {
+        entries = entries.filter((entry) => entry.timestamp >= bound);
+        const remaining = (localMs(nextDayString(group.day)) - localMs(bound)) / 3600000;
+        if (remaining <= 3 || !entries.length) return;
+      }
+      if (!entries.length) return;
+      const type = param.annotations.type;
+      let value;
+      let x;
+      if (type === "sum") {
+        value = entries.reduce((total, entry) => total + entry.value, 0);
+        x = entries[Math.floor(entries.length / 2)].timestamp;
+      } else {
+        const best = entries.reduce((a, b) => (b.value > a.value ? b : a));
+        value = best.value;
+        x = best.timestamp;
+      }
+      highlights.push({ day: group.day, x, value, text: formatValue(value, unit) });
     });
+  return highlights;
 }
 
 function computeYRange(param, series, points) {
@@ -562,14 +587,15 @@ function resolveArrow(param, x, ctx, baseAy) {
 }
 
 function valueAnnotations(param, points, ctx) {
+  const centered = param.annotations.type === "sum";
   return points.map((point) => {
-    const arrow = resolveArrow(param, point.x, ctx, -28);
+    const arrow = centered ? { ax: 0, ay: 0 } : resolveArrow(param, point.x, ctx, -28);
     return {
       x: point.x,
       y: point.value,
       text: point.text,
       xanchor: "center",
-      showarrow: true,
+      showarrow: !centered,
       arrowhead: 2,
       arrowwidth: 1,
       arrowcolor: hexToRgba(param.color, 0.75),
@@ -893,12 +919,16 @@ function renderChart(param, block, series) {
   const timestamps = block.timestamps;
   const bound = startBound();
   let xRange;
+  let dailyEnd = null;
   if (timestamps.length) {
     const start = bound && bound > timestamps[0] ? bound : timestamps[0];
-    const end =
-      state.mode === "hourly"
-        ? timestamps[Math.min(24 * HOURLY_WINDOW_DAYS, timestamps.length - 1)]
-        : timestamps[timestamps.length - 1];
+    let end;
+    if (state.mode === "hourly") {
+      end = timestamps[Math.min(24 * HOURLY_WINDOW_DAYS, timestamps.length - 1)];
+    } else {
+      dailyEnd = nextDayString(timestamps[timestamps.length - 1].slice(0, 10));
+      end = dailyEnd;
+    }
     xRange = [start, end];
   }
 
@@ -921,7 +951,9 @@ function renderChart(param, block, series) {
     }
   }
 
-  const points = param.annotations ? dailyHighlights(param) : [];
+  const points = param.annotations
+    ? dailyHighlights(param, { mode: state.mode, bound })
+    : [];
 
   let yRange = null;
   if (param.bands) {
@@ -959,7 +991,9 @@ function renderChart(param, block, series) {
       tickformat: state.mode === "hourly" ? "%d.%m. %Hh" : "%a %d.%m.",
       tickangle: state.mode === "hourly" ? -45 : 0,
       minallowed: bound || undefined,
-      maxallowed: timestamps.length ? timestamps[timestamps.length - 1] : undefined,
+      maxallowed: timestamps.length
+        ? dailyEnd || timestamps[timestamps.length - 1]
+        : undefined,
     },
     yaxis: {
       gridcolor: "#334155",

@@ -69,13 +69,17 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   (`{ type: "max" | "sum" }`). `dailyHighlights` aggregiert dafür stets die
   **Stundenreihe** aus `state.data.hourly` je Kalendertag (Tagesmaximum bzw.
   Tagessumme), damit die Werte auch in der Tagesansicht stimmen
-  (`temperature_2m`/`pressure_msl` liegen täglich nur als `_mean` vor).
-  `valueAnnotations` rendert einheitlich graue Box + farbigen Pfeil;
-  `computeYRange` schafft Platz für die Labels.
+  (`temperature_2m`/`pressure_msl` liegen täglich nur als `_mean` vor). `max`
+  rendert als graue Box mit farbigem Pfeil am Peak, `sum` als Box ohne Pfeil
+  mittig im Tag. Vom angebrochenen ersten Tag zählt im stündlichen Modus nur der
+  sichtbare Rest ab `now` – und nur, wenn mehr als 3 h übrig sind; im täglichen
+  Modus zählt der volle Tag. `computeYRange` schafft Platz für die Labels. Die
+  tägliche x-Achse reicht bis `nextDayString` des letzten Tags, damit die Labels
+  des letzten Tags nicht abgeschnitten werden.
 - **Dynamische Pfeile:** `dynamicArrow: true` am `annotations`-Eintrag lässt
   `resolveArrow`/`arrowOffset` den Pfeil x-abhängig neigen (Punkt außen → Label
-  zur Mitte, max. 45°, `standoff` hält Abstand zum Punkt). Derzeit für alle
-  annotierten Charts aktiv. `chartXContext` liefert die sichtbare x-Spanne;
+  zur Mitte, max. 45°, `standoff` hält Abstand zum Punkt). Aktiv für die
+  Max-Charts, nicht bei `sum`. `chartXContext` liefert die sichtbare x-Spanne;
   `rebuildAnnotations` wird bei Zoom/Pan/Reset über den `plotly_relayout`-Handler
   neu aufgebaut. `paintAnnotationsUnderBoxes` dreht per `plotly_afterplot` die
   SVG-Reihenfolge, damit die Box über dem Pfeilansatz liegt.
