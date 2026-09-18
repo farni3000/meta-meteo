@@ -43,8 +43,9 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   Seite (max. 45°, `standoff` hält Abstand zum Punkt); die Box wird über den
   Pfeilansatz gemalt und bei Zoom/Pan/Reset neu berechnet. Die Summen-Box der
   Niederschlagsmenge sitzt ohne Pfeil mittig im Tag; die der Sonnenstunden
-  schwebt zusätzlich am oberen Chartrand (`pinToTop`), damit die y-Achse an der
-  Stundenreihe skaliert bleibt und nicht von den Tagessummen plattgedrückt wird.
+  schwebt zusätzlich am oberen Chartrand (`pinToTop`) mit etwas Kopfraum, damit
+  die y-Achse an der Stundenreihe skaliert, der Wert aber nicht mit der Kurve
+  kollidiert.
   Vom angebrochenen (ersten)
   Tag erscheinen im stündlichen Modus nur die verbleibenden Stunden und nur dann,
   wenn noch mehr als drei Stunden übrig sind; Wert und Position beziehen sich

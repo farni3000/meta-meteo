@@ -542,7 +542,7 @@ function dailyHighlights(param, context) {
   return highlights;
 }
 
-function computeYRange(param, series, points) {
+function computeYRange(param, series, points, topFactor = 0.22) {
   const extent = seriesExtent(series) || [0, 0];
   let min = extent[0];
   let max = extent[1];
@@ -552,7 +552,7 @@ function computeYRange(param, series, points) {
     if (!param.zero) min = Math.min(min, point.value);
   });
   const span = max - min || Math.abs(max) || 1;
-  const top = max + span * 0.22;
+  const top = max + span * topFactor;
   if (param.zero) return [0, top];
   return [min - span * 0.1, top];
 }
@@ -971,7 +971,9 @@ function renderChart(param, block, series) {
       yRange = [extent[0] - pad, extent[1] + pad];
     }
   }
-  if (points.length && !param.annotations.pinToTop) {
+  if (param.annotations.pinToTop) {
+    yRange = computeYRange(param, series, [], 0.3);
+  } else if (points.length) {
     yRange = computeYRange(param, series, points);
   }
 
