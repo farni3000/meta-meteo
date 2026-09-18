@@ -27,7 +27,7 @@ const CHARTS = [
     zero: true,
     info: "Windgeschwindigkeit in 10 m Höhe über Grund – die meteorologische Standard-Messhöhe. Wind in 2 m Höhe ist bei Open-Meteo nicht verfügbar. Die Pfeile zeigen die mittlere Strömungsrichtung; blasser = Modelle uneiniger.",
     direction: { key: "wind_direction_10m", label: "Windrichtung" },
-    annotations: { type: "max", style: "chip" },
+    annotations: { type: "max", style: "chip", dynamicArrow: true },
   },
   {
     key: "precipitation_probability",
@@ -164,6 +164,15 @@ function formatValue(value, unit) {
   const text = formatNumber(value);
   if (!unit) return text;
   return unit === "°" ? `${text}${unit}` : `${text} ${unit}`;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function timeValue(value) {
+  if (value === null || value === undefined) return NaN;
+  return new Date(value).getTime();
 }
 
 function startBound() {
@@ -521,6 +530,37 @@ function computeYRange(param, series, points) {
   return [min - span * 0.1, top];
 }
 
+function chartXContext(range, timestamps) {
+  let xMin = null;
+  let xMax = null;
+  if (range && range[0] !== undefined && range[1] !== undefined) {
+    xMin = timeValue(range[0]);
+    xMax = timeValue(range[1]);
+  }
+  if ((!isFinite(xMin) || !isFinite(xMax)) && timestamps && timestamps.length) {
+    xMin = timeValue(timestamps[0]);
+    xMax = timeValue(timestamps[timestamps.length - 1]);
+  }
+  if (!isFinite(xMin) || !isFinite(xMax) || xMax <= xMin) {
+    return { xMin: null, xMax: null };
+  }
+  return { xMin, xMax };
+}
+
+function arrowOffset(x, ctx, baseAy) {
+  if (!ctx || ctx.xMin === null || ctx.xMax === null) return { ax: 0, ay: baseAy };
+  const position = (timeValue(x) - ctx.xMin) / (ctx.xMax - ctx.xMin);
+  if (!isFinite(position)) return { ax: 0, ay: baseAy };
+  const centered = clamp(position - 0.5, -0.5, 0.5);
+  const maxAx = Math.abs(baseAy);
+  return { ax: -(centered / 0.5) * maxAx, ay: baseAy };
+}
+
+function resolveArrow(param, x, ctx, baseAy) {
+  if (param.annotations.dynamicArrow) return arrowOffset(x, ctx, baseAy);
+  return { ax: 0, ay: baseAy };
+}
+
 function valueMarkerTrace(param, points) {
   const style = param.annotations.style;
   let symbol = null;
@@ -556,7 +596,7 @@ function valueMarkerTrace(param, points) {
   };
 }
 
-function valueAnnotations(param, points) {
+function valueAnnotations(param, points, ctx) {
   const style = param.annotations.style;
   return points.map((point, index) => {
     const base = {
@@ -567,14 +607,14 @@ function valueAnnotations(param, points) {
       font: { size: 10, color: "#e2e8f0" },
     };
     if (style === "bubble") {
+      const arrow = resolveArrow(param, point.x, ctx, -28);
       return {
         ...base,
         showarrow: true,
         arrowhead: 2,
         arrowwidth: 1,
         arrowcolor: hexToRgba(param.color, 0.8),
-        ax: 0,
-        ay: -28,
+        ...arrow,
         bgcolor: hexToRgba(param.color, 0.18),
         bordercolor: hexToRgba(param.color, 0.55),
         borderwidth: 1,
@@ -582,15 +622,16 @@ function valueAnnotations(param, points) {
       };
     }
     if (style === "chip") {
+      const arrow = resolveArrow(param, point.x, ctx, -28);
       return {
         ...base,
         showarrow: true,
         arrowhead: 2,
         arrowwidth: 1,
         arrowcolor: hexToRgba(param.color, 0.75),
-        ax: 0,
-        ay: -28,
-        bgcolor: "rgba(15, 23, 42, 0.92)",
+        ...arrow,
+        standoff: 6,
+        bgcolor: "rgba(34, 46, 64, 0.95)",
         bordercolor: hexToRgba(param.color, 0.8),
         borderwidth: 1,
         borderpad: 3,
@@ -607,14 +648,14 @@ function valueAnnotations(param, points) {
       };
     }
     if (style === "underbar") {
+      const arrow = resolveArrow(param, point.x, ctx, 20);
       return {
         ...base,
         showarrow: true,
         arrowhead: 0,
         arrowwidth: 1,
         arrowcolor: hexToRgba(param.color, 0.7),
-        ax: 0,
-        ay: 20,
+        ...arrow,
         yanchor: "top",
         bgcolor: "rgba(0,0,0,0)",
       };
@@ -627,6 +668,18 @@ function valueAnnotations(param, points) {
       font: { size: 9, color: param.color },
     };
   });
+}
+
+function rebuildAnnotations(entry, range) {
+  const ctx = chartXContext(range, entry.timestamps);
+  const annotations = [];
+  if (entry.param.bands && entry.yRange) {
+    annotations.push(...bandAnnotations(entry.param.bands, entry.yRange));
+  }
+  if (entry.points.length) {
+    annotations.push(...valueAnnotations(entry.param, entry.points, ctx));
+  }
+  return annotations;
 }
 
 function buildTraces(x, series, color) {
@@ -997,12 +1050,13 @@ function renderChart(param, block, series) {
   if (yRange) {
     layout.yaxis.range = yRange;
   }
+  const xCtx = chartXContext(xRange, timestamps);
   const annotations = [];
   if (param.bands && yRange) {
     annotations.push(...bandAnnotations(param.bands, yRange));
   }
   if (points.length) {
-    annotations.push(...valueAnnotations(param, points));
+    annotations.push(...valueAnnotations(param, points, xCtx));
   }
   if (annotations.length) {
     layout.annotations = annotations;
@@ -1044,13 +1098,32 @@ function renderChart(param, block, series) {
       : autoRange
       ? [autoRange[0], autoRange[1]]
       : null;
-    state.plots[param.key] = { el: plot, range: defaultRange, defaultRange };
+    state.plots[param.key] = {
+      el: plot,
+      range: defaultRange,
+      defaultRange,
+      param,
+      points,
+      yRange,
+      timestamps,
+    };
     plot.on("plotly_relayout", (eventData) => {
+      const entry = state.plots[param.key];
       const range = extractXRange(eventData, plot);
       if (range) {
-        state.plots[param.key].range = range;
+        entry.range = range;
       } else if (eventData["xaxis.autorange"]) {
-        state.plots[param.key].range = state.plots[param.key].defaultRange;
+        entry.range = entry.defaultRange;
+      }
+      const zoomed =
+        "xaxis.range[0]" in eventData ||
+        Array.isArray(eventData["xaxis.range"]) ||
+        !!eventData["xaxis.autorange"];
+      if (zoomed && param.annotations && param.annotations.dynamicArrow && points.length) {
+        const target = eventData["xaxis.autorange"] ? entry.defaultRange : entry.range;
+        if (target) {
+          Plotly.relayout(plot, { annotations: rebuildAnnotations(entry, target) });
+        }
       }
     });
   });

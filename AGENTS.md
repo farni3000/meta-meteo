@@ -72,6 +72,11 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   (`temperature_2m`/`pressure_msl` liegen täglich nur als `_mean` vor). Stile:
   `bubble`, `caret`, `chip`, `underbar`, `dot`; `caret`/`dot` zeichnen zusätzlich
   einen Marker-Trace. `computeYRange` schafft Platz für die Labels.
+- **Dynamische Pfeile:** `dynamicArrow: true` am `annotations`-Eintrag lässt
+  `resolveArrow`/`arrowOffset` den Pfeil x-abhängig neigen (Punkt außen → Label
+  zur Mitte, max. 45°, `standoff` hält Abstand zum Punkt). `chartXContext` liefert
+  die sichtbare x-Spanne; `rebuildAnnotations` wird bei Zoom/Pan/Reset über den
+  `plotly_relayout`-Handler neu aufgebaut (nur wenn `dynamicArrow` aktiv ist).
 
 ## Tests
 
