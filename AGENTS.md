@@ -61,6 +61,17 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   wird pro Request frisch gesetzt. Das Frontend setzt `xaxis.minallowed` auf
   diesen Wert (stündlich) bzw. auf 00:00 heute (täglich), damit vergangene Daten
   auch per Zoom/Pan unsichtbar bleiben.
+- **Zahlenformat:** Immer über `formatNumber`/`formatValue` in `frontend/app.js`
+  (Konstante `LOCALE = "de-DE"`, eine Nachkommastelle, Einheit). Plotly-Hover
+  nutzt deshalb vorformatierte Werte in `customdata` statt `%{y:.2f}`, weil
+  Plotly sonst einen Punkt als Dezimaltrenner setzt.
+- **Tages-Kennwerte im Chart:** Über ein `annotations`-Feld am `CHARTS`-Eintrag
+  (`{ type: "max" | "sum", style: ... }`). `dailyHighlights` aggregiert dafür
+  stets die **Stundenreihe** aus `state.data.hourly` je Kalendertag (Tagesmaximum
+  bzw. Tagessumme), damit die Werte auch in der Tagesansicht stimmen
+  (`temperature_2m`/`pressure_msl` liegen täglich nur als `_mean` vor). Stile:
+  `bubble`, `caret`, `chip`, `underbar`, `dot`; `caret`/`dot` zeichnen zusätzlich
+  einen Marker-Trace. `computeYRange` schafft Platz für die Labels.
 
 ## Tests
 

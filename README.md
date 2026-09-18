@@ -32,6 +32,18 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   dynamisch am Datenbereich, sodass nur die relevanten Bänder sichtbar sind.
 - Umschalter „stündlich / täglich“; stündlich startet die Ansicht mit den ersten
   3 Tagen (per Zoom alle 7 Tage).
+- Tages-Kennwerte direkt im Chart: Temperatur, Wind, UV-Index und Luftdruck
+  zeigen je Tag den Tageshöchstwert, die Niederschlagsmenge die Tagessumme. Die
+  Werte werden immer aus der Stundenreihe (`max` bzw. `sum` je Kalendertag)
+  berechnet, damit sie auch in der Tagesansicht korrekt sind. Jeder Chart nutzt
+  einen eigenen Darstellungsstil (Sprechblase, rahmenloser Zeiger, Pille,
+  Unterstrich, offener Marker) – konfigurierbar über das `annotations`-Feld im
+  jeweiligen `CHARTS`-Eintrag.
+- Einheitliche Zahlennotation: alle Werte in Hover-Tooltips und Chart-Annotationen
+  werden mit einer Nachkommastelle und mit Einheit ausgegeben (z. B. `23,4 °C`,
+  `3,2 mm`). Die Formatierung läuft zentral über `formatNumber`/`formatValue` mit
+  `LOCALE = "de-DE"` in `frontend/app.js` und ist damit Vorbereitung für spätere
+  internationale Versionen.
 - Datenstart ab „jetzt“: Der stündliche Graph beginnt an der aktuellen Minute
   (Ortszeit des Ortes). Eine harte Achsengrenze (`xaxis.minallowed`) verhindert,
   dass vergangene Stunden – auch per Zoom oder Pan – sichtbar werden. Der
@@ -196,7 +208,9 @@ anlegen. Aggregation und Caching sind generisch und brauchen keine Anpassung.
 Für Winkelgrößen `circular=True` setzen, damit der Vektor-Mittelwert statt des
 arithmetischen Mittels verwendet wird. Soll die Größe als Pfeile in einem
 bestehenden Chart erscheinen, im Frontend-Eintrag `direction: { key, label }`
-ergänzen statt ein eigenes Chart anzulegen.
+ergänzen statt ein eigenes Chart anzulegen. Für einen Tages-Kennwert im Chart
+`annotations: { type: "max" | "sum", style: "bubble" | "caret" | "chip" | "underbar" | "dot" }`
+setzen.
 
 ## Bekannte Einschränkung: UV-Index
 

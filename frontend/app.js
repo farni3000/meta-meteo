@@ -8,6 +8,7 @@ const CHARTS = [
     overlays: [
       { key: "apparent_temperature", label: "Gefühlte Temperatur", color: "#fca5a5" },
     ],
+    annotations: { type: "max", style: "bubble" },
   },
   {
     key: "sunshine_duration",
@@ -26,6 +27,7 @@ const CHARTS = [
     zero: true,
     info: "Windgeschwindigkeit in 10 m Höhe über Grund – die meteorologische Standard-Messhöhe. Wind in 2 m Höhe ist bei Open-Meteo nicht verfügbar. Die Pfeile zeigen die mittlere Strömungsrichtung; blasser = Modelle uneiniger.",
     direction: { key: "wind_direction_10m", label: "Windrichtung" },
+    annotations: { type: "max", style: "chip" },
   },
   {
     key: "precipitation_probability",
@@ -40,6 +42,7 @@ const CHARTS = [
     color: "#4ade80",
     zero: true,
     info: "Erwartete Niederschlagsmenge in mm.",
+    annotations: { type: "sum", style: "underbar" },
   },
   {
     key: "uv_index",
@@ -47,6 +50,7 @@ const CHARTS = [
     color: "#facc15",
     zero: true,
     info: "UV-Index (0 = niedrig, ab 3 erhöhter Schutzbedarf, ab 8 sehr hoch).",
+    annotations: { type: "max", style: "caret" },
   },
   {
     key: "pressure_msl",
@@ -54,6 +58,7 @@ const CHARTS = [
     color: "#c084fc",
     zero: false,
     info: "Luftdruck auf Meeresniveau in hPa – auf Meeresniveau reduziert und daher höhenunabhängig. Die farbigen Bänder ordnen den Verlauf meteorologisch ein.",
+    annotations: { type: "max", style: "dot" },
     bands: [
       { from: 900, to: 1000, label: "Tiefdruck", color: "#60a5fa" },
       { from: 1000, to: 1013, label: "Leicht unterdurchschnittlich", color: "#22d3ee" },
@@ -143,6 +148,22 @@ function setStatus(message, isError = false) {
 
 function displayName(model) {
   return DISPLAY_NAMES[model] || model;
+}
+
+const LOCALE = "de-DE";
+
+function formatNumber(value, digits = 1) {
+  if (value === null || value === undefined || !isFinite(value)) return "–";
+  return new Intl.NumberFormat(LOCALE, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
+function formatValue(value, unit) {
+  const text = formatNumber(value);
+  if (!unit) return text;
+  return unit === "°" ? `${text}${unit}` : `${text} ${unit}`;
 }
 
 function startBound() {
@@ -455,6 +476,159 @@ function bandAnnotations(bands, range) {
     });
 }
 
+function dailyHighlights(param) {
+  const hourly = state.data.hourly;
+  const source = hourly && hourly.parameters && hourly.parameters[param.key];
+  if (!source || !source.mean || !source.mean.length) return [];
+  const unit = source.unit || "";
+  const groups = new Map();
+  hourly.timestamps.forEach((timestamp, index) => {
+    const value = source.mean[index];
+    if (value === null || value === undefined) return;
+    const day = timestamp.slice(0, 10);
+    let group = groups.get(day);
+    if (!group) {
+      group = { day, max: -Infinity, maxX: null, sum: 0 };
+      groups.set(day, group);
+    }
+    if (value > group.max) {
+      group.max = value;
+      group.maxX = timestamp;
+    }
+    group.sum += value;
+  });
+  const type = param.annotations.type;
+  return Array.from(groups.values())
+    .sort((a, b) => a.day.localeCompare(b.day))
+    .map((group) => {
+      const value = type === "sum" ? group.sum : group.max;
+      return { day: group.day, x: group.maxX, value, text: formatValue(value, unit) };
+    });
+}
+
+function computeYRange(param, series, points) {
+  const extent = seriesExtent(series) || [0, 0];
+  let min = extent[0];
+  let max = extent[1];
+  points.forEach((point) => {
+    if (point.value === null || point.value === undefined) return;
+    max = Math.max(max, point.value);
+    if (!param.zero) min = Math.min(min, point.value);
+  });
+  const span = max - min || Math.abs(max) || 1;
+  const top = max + span * 0.22;
+  if (param.zero) return [0, top];
+  return [min - span * 0.1, top];
+}
+
+function valueMarkerTrace(param, points) {
+  const style = param.annotations.style;
+  let symbol = null;
+  let open = false;
+  if (style === "caret") {
+    symbol = "triangle-down";
+  } else if (style === "dot") {
+    symbol = "diamond-open";
+    open = true;
+  }
+  if (!symbol) return null;
+  const xs = [];
+  const ys = [];
+  points.forEach((point) => {
+    if (point.value === null || point.value === undefined) return;
+    xs.push(point.x);
+    ys.push(point.value);
+  });
+  if (!xs.length) return null;
+  return {
+    x: xs,
+    y: ys,
+    type: "scatter",
+    mode: "markers",
+    marker: {
+      symbol,
+      size: open ? 9 : 8,
+      color: open ? "rgba(0,0,0,0)" : param.color,
+      line: { color: param.color, width: 1.5 },
+    },
+    hoverinfo: "skip",
+    showlegend: false,
+  };
+}
+
+function valueAnnotations(param, points) {
+  const style = param.annotations.style;
+  return points.map((point, index) => {
+    const base = {
+      x: point.x,
+      y: point.value,
+      text: point.text,
+      xanchor: "center",
+      font: { size: 10, color: "#e2e8f0" },
+    };
+    if (style === "bubble") {
+      return {
+        ...base,
+        showarrow: true,
+        arrowhead: 2,
+        arrowwidth: 1,
+        arrowcolor: hexToRgba(param.color, 0.8),
+        ax: 0,
+        ay: -28,
+        bgcolor: hexToRgba(param.color, 0.18),
+        bordercolor: hexToRgba(param.color, 0.55),
+        borderwidth: 1,
+        borderpad: 3,
+      };
+    }
+    if (style === "chip") {
+      return {
+        ...base,
+        showarrow: true,
+        arrowhead: 2,
+        arrowwidth: 1,
+        arrowcolor: hexToRgba(param.color, 0.75),
+        ax: 0,
+        ay: -28,
+        bgcolor: "rgba(15, 23, 42, 0.92)",
+        bordercolor: hexToRgba(param.color, 0.8),
+        borderwidth: 1,
+        borderpad: 3,
+        font: { size: 10, color: param.color },
+      };
+    }
+    if (style === "caret") {
+      return {
+        ...base,
+        showarrow: false,
+        yshift: 18,
+        bgcolor: "rgba(0,0,0,0)",
+        font: { size: 10, color: param.color },
+      };
+    }
+    if (style === "underbar") {
+      return {
+        ...base,
+        showarrow: true,
+        arrowhead: 0,
+        arrowwidth: 1,
+        arrowcolor: hexToRgba(param.color, 0.7),
+        ax: 0,
+        ay: 20,
+        yanchor: "top",
+        bgcolor: "rgba(0,0,0,0)",
+      };
+    }
+    return {
+      ...base,
+      showarrow: false,
+      yshift: index % 2 === 0 ? 16 : -18,
+      bgcolor: "rgba(0,0,0,0)",
+      font: { size: 9, color: param.color },
+    };
+  });
+}
+
 function buildTraces(x, series, color) {
   const lower = series.mean.map((value, index) =>
     value === null || series.std[index] === null ? null : value - series.std[index]
@@ -462,6 +636,12 @@ function buildTraces(x, series, color) {
   const upper = series.mean.map((value, index) =>
     value === null || series.std[index] === null ? null : value + series.std[index]
   );
+  const unit = series.unit || "";
+  const counts = series.model_count || [];
+  const customdata = series.mean.map((value, index) => [
+    value === null || value === undefined ? "–" : formatValue(value, unit),
+    counts[index] || 0,
+  ]);
   return [
     {
       x,
@@ -486,30 +666,36 @@ function buildTraces(x, series, color) {
     {
       x,
       y: series.mean,
-      customdata: series.model_count,
+      customdata,
       type: "scatter",
       mode: "lines",
       line: { color, width: 2.5 },
       name: "Mittelwert",
-      hovertemplate: "<b>%{x}</b><br>Mittelwert: %{y:.2f}<br>%{customdata} Modelle<extra></extra>",
+      hovertemplate:
+        "<b>%{x}</b><br>Mittelwert: %{customdata[0]}<br>%{customdata[1]} Modelle<extra></extra>",
     },
   ];
 }
 
 function overlayTrace(x, series, overlay) {
-  const unit = series.unit ? ` ${series.unit}` : "";
+  const unit = series.unit || "";
+  const counts = series.model_count || [];
+  const customdata = series.mean.map((value, index) => [
+    value === null || value === undefined ? "–" : formatValue(value, unit),
+    counts[index] || 0,
+  ]);
   return {
     x,
     y: series.mean,
-    customdata: series.model_count,
+    customdata,
     type: "scatter",
     mode: "lines",
     line: { color: overlay.color, width: 2, dash: "dash" },
     name: overlay.label,
     yaxis: overlay.secondary ? "y2" : "y",
     hovertemplate:
-      `<b>%{x}</b><br>${overlay.label}: %{y:.2f}${unit}` +
-      "<br>%{customdata} Modelle<extra></extra>",
+      `<b>%{x}</b><br>${overlay.label}: %{customdata[0]}` +
+      "<br>%{customdata[1]} Modelle<extra></extra>",
   };
 }
 
@@ -539,9 +725,9 @@ function directionTrace(x, series, color, step = 1) {
         : Math.max(0.15, 1 - Math.min(spread, 45) / 45)
     );
     customdata.push([
-      Math.round(value),
+      formatValue(value, "°"),
       toCardinal(value),
-      spread === null || spread === undefined ? null : Math.round(spread),
+      spread === null || spread === undefined ? "–" : formatValue(spread, "°"),
       counts[index] || 0,
     ]);
   }
@@ -563,8 +749,8 @@ function directionTrace(x, series, color, step = 1) {
     },
     name: "Windrichtung (Pfeile)",
     hovertemplate:
-      "<b>%{x}</b><br>Wind aus %{customdata[1]} (%{customdata[0]}°)" +
-      "<br>Streuung: ±%{customdata[2]}°<br>%{customdata[3]} Modelle<extra></extra>",
+      "<b>%{x}</b><br>Wind aus %{customdata[1]} (%{customdata[0]})" +
+      "<br>Streuung: ±%{customdata[2]}<br>%{customdata[3]} Modelle<extra></extra>",
   };
 }
 
@@ -754,13 +940,22 @@ function renderChart(param, block, series) {
     }
   }
 
-  let bandRange = null;
+  const points = param.annotations ? dailyHighlights(param) : [];
+  if (points.length) {
+    const markerTrace = valueMarkerTrace(param, points);
+    if (markerTrace) traces.push(markerTrace);
+  }
+
+  let yRange = null;
   if (param.bands) {
     const extent = seriesExtent(series);
     if (extent) {
       const pad = Math.max(2, (extent[1] - extent[0]) * 0.12);
-      bandRange = [extent[0] - pad, extent[1] + pad];
+      yRange = [extent[0] - pad, extent[1] + pad];
     }
+  }
+  if (points.length) {
+    yRange = computeYRange(param, series, points);
   }
 
   const shapes = dayShapes(timestamps, state.mode);
@@ -799,9 +994,18 @@ function renderChart(param, block, series) {
   if (hasDirection) {
     layout.yaxis.domain = [0, 0.86];
   }
-  if (bandRange) {
-    layout.yaxis.range = bandRange;
-    layout.annotations = bandAnnotations(param.bands, bandRange);
+  if (yRange) {
+    layout.yaxis.range = yRange;
+  }
+  const annotations = [];
+  if (param.bands && yRange) {
+    annotations.push(...bandAnnotations(param.bands, yRange));
+  }
+  if (points.length) {
+    annotations.push(...valueAnnotations(param, points));
+  }
+  if (annotations.length) {
+    layout.annotations = annotations;
   }
   if (xRange) {
     layout.xaxis.range = xRange;
