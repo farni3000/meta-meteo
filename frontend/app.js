@@ -500,6 +500,64 @@ function localMs(value) {
   return Date.UTC(year, month - 1, day, hour, minute);
 }
 
+function isoLocal(ms) {
+  return new Date(ms).toISOString().slice(0, 16);
+}
+
+function wallClockMs(value) {
+  if (typeof value === "number" && isFinite(value)) return value;
+  const match = String(value).match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):?(\d{2})?)?/
+  );
+  if (!match) return NaN;
+  return Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4] || 0),
+    Number(match[5] || 0)
+  );
+}
+
+function hourlyTicks(start, end) {
+  const startMs = wallClockMs(start);
+  const endMs = wallClockMs(end);
+  if (!isFinite(startMs) || !isFinite(endMs) || endMs <= startMs) {
+    return { tickvals: [], ticktext: [] };
+  }
+  const spanHours = (endMs - startMs) / 3600000;
+  const step = [1, 2, 3, 6, 12, 24].find((hours) => spanHours / hours <= 8) || 24;
+  let tickMs = Math.floor(startMs / 86400000) * 86400000;
+  if (tickMs < startMs) {
+    const index = Math.ceil((startMs - tickMs) / 3600000 / step);
+    tickMs += index * step * 3600000;
+  }
+  const weekdays = I18n.weekdays();
+  const tickvals = [];
+  const ticktext = [];
+  while (tickMs <= endMs) {
+    const iso = isoLocal(tickMs);
+    const day = iso.slice(0, 10);
+    const hour = Number(iso.slice(11, 13));
+    tickvals.push(iso);
+    if (hour === 0) {
+      const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
+      ticktext.push(weekdays[weekday]);
+    } else {
+      ticktext.push(`${iso.slice(11, 13)}:00`);
+    }
+    tickMs += step * 3600000;
+  }
+  return { tickvals, ticktext };
+}
+
+function hourlyTickLayout(range) {
+  if (!range || range[0] === undefined || range[1] === undefined) return {};
+  const { tickvals, ticktext } = hourlyTicks(range[0], range[1]);
+  if (!tickvals.length) return {};
+  return { "xaxis.tickvals": tickvals, "xaxis.ticktext": ticktext };
+}
+
 function dailyHighlights(param, context) {
   const hourly = state.data.hourly;
   const source = hourly && hourly.parameters && hourly.parameters[param.key];
@@ -1001,9 +1059,7 @@ function renderChart(param, block, series) {
     xaxis: {
       gridcolor: "#334155",
       type: "date",
-      nticks: 7,
       automargin: true,
-      tickformat: I18n.tickFormat(state.mode),
       tickangle: state.mode === "hourly" ? -45 : 0,
       minallowed: bound || undefined,
       maxallowed: timestamps.length
@@ -1017,6 +1073,17 @@ function renderChart(param, block, series) {
     },
     shapes,
   };
+  if (state.mode === "hourly" && xRange) {
+    const { tickvals, ticktext } = hourlyTicks(xRange[0], xRange[1]);
+    if (tickvals.length) {
+      layout.xaxis.tickmode = "array";
+      layout.xaxis.tickvals = tickvals;
+      layout.xaxis.ticktext = ticktext;
+    }
+  } else {
+    layout.xaxis.nticks = 7;
+    layout.xaxis.tickformat = I18n.tickFormat(state.mode);
+  }
   if (hasDirection) {
     layout.yaxis.domain = [0, 0.86];
   }
@@ -1093,11 +1160,18 @@ function renderChart(param, block, series) {
         "xaxis.range[0]" in eventData ||
         Array.isArray(eventData["xaxis.range"]) ||
         !!eventData["xaxis.autorange"];
-      if (zoomed && param.annotations && param.annotations.dynamicArrow && points.length) {
-        const target = eventData["xaxis.autorange"] ? entry.defaultRange : entry.range;
-        if (target) {
-          Plotly.relayout(plot, { annotations: rebuildAnnotations(entry, target) });
-        }
+      if (!zoomed) return;
+      const target = eventData["xaxis.autorange"] ? entry.defaultRange : entry.range;
+      if (!target) return;
+      const update = {};
+      if (state.mode === "hourly") {
+        Object.assign(update, hourlyTickLayout(target));
+      }
+      if (param.annotations && param.annotations.dynamicArrow && points.length) {
+        update.annotations = rebuildAnnotations(entry, target);
+      }
+      if (Object.keys(update).length) {
+        Plotly.relayout(plot, update);
       }
     });
     paintAnnotationsUnderBoxes(plot);

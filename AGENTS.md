@@ -72,7 +72,14 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   `direction`, `bands` analog), Auflösung erst beim Rendern. Sprache: Default aus
   `navigator.languages`, Persistenz in `localStorage["metameteo.lang"]`; Wechsel
   übersetzt live ohne neuen Request (`changeLanguage` → `render()`). Sprache
-  spezifisch außerdem `LOCALES`, `CARDINALS`, `TICK_FORMATS`, `gemName()`.
+  spezifisch außerdem `LOCALES`, `CARDINALS`, `WEEKDAYS`, `TICK_FORMATS`,
+  `gemName()`.
+- **X-Achse:** Im Stundenmodus baut `hourlyTicks(range)` eigene `tickvals`/
+  `ticktext` (Wochentag aus `I18n.weekdays()` um Mitternacht, sonst `HH:00`);
+  Schrittweite aus `[1,2,3,6,12,24]` so, dass ≤ 8 Ticks entstehen, Start per
+  `wallClockMs`/`isoLocal`. Bei Zoom/Pan im `plotly_relayout`-Handler über
+  `hourlyTickLayout()` neu setzen (zusammen mit den Annotationen in einem
+  `Plotly.relayout`). Tagesmodus bleibt bei `tickformat: "%a"`.
 - **Zahlenformat:** Immer über `formatNumber`/`formatValue` in `frontend/app.js`
   (Locale aus `I18n.locale()`, eine Nachkommastelle, Einheit). Plotly-Hover
   nutzt deshalb vorformatierte Werte in `customdata` statt `%{y:.2f}`, weil

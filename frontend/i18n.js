@@ -28,11 +28,19 @@ const I18n = (() => {
   };
 
   const TICK_FORMATS = {
-    de: { hourly: "%d.%m. %Hh", daily: "%a %d.%m." },
-    en: { hourly: "%d/%m %H:%M", daily: "%a %d/%m" },
-    fr: { hourly: "%d/%m %H:%M", daily: "%a %d/%m" },
-    es: { hourly: "%d/%m %H:%M", daily: "%a %d/%m" },
-    it: { hourly: "%d/%m %H:%M", daily: "%a %d/%m" },
+    de: { hourly: "%d.%m. %Hh", daily: "%a" },
+    en: { hourly: "%d/%m %H:%M", daily: "%a" },
+    fr: { hourly: "%d/%m %H:%M", daily: "%a" },
+    es: { hourly: "%d/%m %H:%M", daily: "%a" },
+    it: { hourly: "%d/%m %H:%M", daily: "%a" },
+  };
+
+  const WEEKDAYS = {
+    de: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+    en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    fr: ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
+    es: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
+    it: ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"],
   };
 
   const TRANSLATIONS = {
@@ -430,6 +438,10 @@ const I18n = (() => {
     return CARDINALS[currentLang] || CARDINALS[DEFAULT_LANG];
   }
 
+  function weekdays() {
+    return WEEKDAYS[currentLang] || WEEKDAYS[DEFAULT_LANG];
+  }
+
   function tickFormat(mode) {
     const formats = TICK_FORMATS[currentLang] || TICK_FORMATS[DEFAULT_LANG];
     return mode === "daily" ? formats.daily : formats.hourly;
@@ -449,6 +461,7 @@ const I18n = (() => {
     detectLang,
     locale,
     cardinals,
+    weekdays,
     tickFormat,
     gemName,
     supported: SUPPORTED,

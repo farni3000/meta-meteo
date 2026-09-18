@@ -104,6 +104,12 @@ Locale-Bundles von der Plotly-CDN geladen. Bei vierstelligen Werten gruppieren
 Spanisch und Italienisch standardkonform nicht (`1013,2` statt `1.013,2`); das
 ist CLDR-Verhalten und bewusst so belassen.
 
+Die X-Achse beschriftet die Charts sprachrichtig: Im Stundenmodus steht an
+Tagesgrenzen (Mitternacht) das lokalisierte Wochentagskürzel (z. B. `Mo`, `Thu`,
+`Jeu`, `Jue`, `Gio`), dazwischen die Uhrzeit; im Tagesmodus nur der Wochentag.
+Die Tick-Positionen werden passend zur sichtbaren Spanne gewählt und bei
+Zoom/Pan neu berechnet.
+
 Eine neue Sprache ergänzen: Eintrag in `TRANSLATIONS`, `LOCALES`, `CARDINALS`,
 `TICK_FORMATS` und `LANGUAGES` in `frontend/i18n.js` (alle Schlüssel müssen
 vorhanden sein) sowie die Sprache in `GEOCODE_LANGUAGES` in `backend/config.py`
