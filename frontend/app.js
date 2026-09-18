@@ -893,9 +893,13 @@ function renderChart(param, block, series) {
   const timestamps = block.timestamps;
   const bound = startBound();
   let xRange;
-  if (state.mode === "hourly" && timestamps.length) {
+  if (timestamps.length) {
     const start = bound && bound > timestamps[0] ? bound : timestamps[0];
-    xRange = [start, timestamps[Math.min(24 * HOURLY_WINDOW_DAYS, timestamps.length - 1)]];
+    const end =
+      state.mode === "hourly"
+        ? timestamps[Math.min(24 * HOURLY_WINDOW_DAYS, timestamps.length - 1)]
+        : timestamps[timestamps.length - 1];
+    xRange = [start, end];
   }
 
   const traces = buildTraces(timestamps, series, param.color);
