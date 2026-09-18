@@ -19,6 +19,7 @@ const CHARTS = [
     overlays: [
       { key: "cloud_cover", label: "Bewölkung", color: "#94a3b8", secondary: true },
     ],
+    annotations: { type: "sum", pinToTop: true },
   },
   {
     key: "wind_speed_10m",
@@ -589,11 +590,12 @@ function resolveArrow(param, x, ctx, baseAy) {
 
 function valueAnnotations(param, points, ctx) {
   const centered = param.annotations.type === "sum";
+  const pinToTop = !!param.annotations.pinToTop;
   return points.map((point) => {
     const arrow = centered ? { ax: 0, ay: 0 } : resolveArrow(param, point.x, ctx, -28);
-    return {
+    const annotation = {
       x: point.x,
-      y: point.value,
+      y: pinToTop ? 0.97 : point.value,
       text: point.text,
       xanchor: "center",
       showarrow: !centered,
@@ -608,6 +610,11 @@ function valueAnnotations(param, points, ctx) {
       borderpad: 3,
       font: { size: 10, color: param.color },
     };
+    if (pinToTop) {
+      annotation.yref = "paper";
+      annotation.yanchor = "top";
+    }
+    return annotation;
   });
 }
 
@@ -964,7 +971,7 @@ function renderChart(param, block, series) {
       yRange = [extent[0] - pad, extent[1] + pad];
     }
   }
-  if (points.length) {
+  if (points.length && !param.annotations.pinToTop) {
     yRange = computeYRange(param, series, points);
   }
 

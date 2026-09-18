@@ -34,14 +34,18 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   3 Tagen (per Zoom alle 7 Tage).
 - Tages-Kennwerte direkt im Chart: Temperatur, Wind, UV-Index,
   Niederschlagswahrscheinlichkeit und Luftdruck zeigen je Tag den
-  Tageshöchstwert, die Niederschlagsmenge die Tagessumme. Die Werte werden immer
+  Tageshöchstwert, die Niederschlagsmenge und die Sonnenstunden die Tagessumme.
+  Die Werte werden immer
   aus der Stundenreihe (`max` bzw. `sum` je Kalendertag) berechnet, damit sie
   auch in der Tagesansicht korrekt sind. Max-Charts nutzen eine graue Box
   (`#222e40`) mit farbigem Rand, farbigem Wert und dynamischem Pfeil – je weiter
   der Tagespeak außen liegt, desto flacher zeigt der Pfeil zur gegenüberliegenden
   Seite (max. 45°, `standoff` hält Abstand zum Punkt); die Box wird über den
   Pfeilansatz gemalt und bei Zoom/Pan/Reset neu berechnet. Die Summen-Box der
-  Niederschlagsmenge sitzt ohne Pfeil mittig im Tag. Vom angebrochenen (ersten)
+  Niederschlagsmenge sitzt ohne Pfeil mittig im Tag; die der Sonnenstunden
+  schwebt zusätzlich am oberen Chartrand (`pinToTop`), damit die y-Achse an der
+  Stundenreihe skaliert bleibt und nicht von den Tagessummen plattgedrückt wird.
+  Vom angebrochenen (ersten)
   Tag erscheinen im stündlichen Modus nur die verbleibenden Stunden und nur dann,
   wenn noch mehr als drei Stunden übrig sind; Wert und Position beziehen sich
   dann auf den sichtbaren Rest. Im täglichen Modus wird der volle Tag verwendet.
