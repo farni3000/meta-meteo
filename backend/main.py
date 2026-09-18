@@ -52,6 +52,15 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="MetaMeteo", version="1.0.0", lifespan=lifespan)
 
 
+@app.middleware("http")
+async def disable_frontend_cache(request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.endswith((".html", ".js", ".css")):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
+
 @app.get("/api/geocode", response_model=GeocodeResponse)
 async def geocode(
     query: str = Query(..., min_length=1),
