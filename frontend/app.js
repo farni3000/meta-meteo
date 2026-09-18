@@ -522,6 +522,23 @@ function wallClockMs(value) {
   );
 }
 
+function weekdayName(value) {
+  const ms = wallClockMs(value);
+  if (!isFinite(ms)) return String(value);
+  return I18n.weekdays()[new Date(ms).getUTCDay()];
+}
+
+function hoverXLabel(value) {
+  const ms = wallClockMs(value);
+  if (!isFinite(ms)) return String(value);
+  const date = new Date(ms);
+  const day = I18n.weekdays()[date.getUTCDay()];
+  if (state.mode === "daily") return day;
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${day} ${hours}:${minutes}`;
+}
+
 function hourlyTicks(start, end) {
   const startMs = wallClockMs(start);
   const endMs = wallClockMs(end);
@@ -535,17 +552,14 @@ function hourlyTicks(start, end) {
     const index = Math.ceil((startMs - tickMs) / 3600000 / step);
     tickMs += index * step * 3600000;
   }
-  const weekdays = I18n.weekdays();
   const tickvals = [];
   const ticktext = [];
   while (tickMs <= endMs) {
     const iso = isoLocal(tickMs);
-    const day = iso.slice(0, 10);
     const hour = Number(iso.slice(11, 13));
     tickvals.push(iso);
     if (hour === 0) {
-      const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
-      ticktext.push(weekdays[weekday]);
+      ticktext.push(weekdayName(iso));
     } else {
       ticktext.push(`${iso.slice(11, 13)}:00`);
     }
@@ -719,6 +733,7 @@ function buildTraces(x, series, color) {
   const customdata = series.mean.map((value, index) => [
     value === null || value === undefined ? "–" : formatValue(value, unit),
     counts[index] || 0,
+    hoverXLabel(x[index]),
   ]);
   return [
     {
@@ -760,6 +775,7 @@ function overlayTrace(x, series, overlay) {
   const customdata = series.mean.map((value, index) => [
     value === null || value === undefined ? "–" : formatValue(value, unit),
     counts[index] || 0,
+    hoverXLabel(x[index]),
   ]);
   return {
     x,
@@ -805,6 +821,7 @@ function directionTrace(x, series, color, step = 1) {
       toCardinal(value),
       spread === null || spread === undefined ? "–" : formatValue(spread, "°"),
       counts[index] || 0,
+      hoverXLabel(x[index]),
     ]);
   }
   return {
@@ -1083,16 +1100,13 @@ function renderChart(param, block, series) {
       layout.xaxis.tickvals = tickvals;
       layout.xaxis.ticktext = ticktext;
     }
-    layout.xaxis.hoverformat = I18n.hoverFormat("hourly");
   } else if (state.mode === "daily") {
     layout.xaxis.tickmode = "array";
     layout.xaxis.tickvals = timestamps;
-    layout.xaxis.tickformat = I18n.tickFormat("daily");
-    layout.xaxis.hoverformat = I18n.hoverFormat("daily");
+    layout.xaxis.ticktext = timestamps.map(weekdayName);
   } else {
     layout.xaxis.nticks = 7;
     layout.xaxis.tickformat = I18n.tickFormat("hourly");
-    layout.xaxis.hoverformat = I18n.hoverFormat("hourly");
   }
   if (hasDirection) {
     layout.yaxis.domain = [0, 0.86];

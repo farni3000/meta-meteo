@@ -79,9 +79,9 @@ const I18n = (() => {
       "chart.legendStd": "1σ Abweichung",
       "chart.legendMean": "Mittelwert",
       "chart.legendDirection": "Windrichtung (Pfeile)",
-      "chart.hoverMeanTemplate": "<b>%{x}</b><br>Mittelwert: %{customdata[0]}<br>%{customdata[1]} Modelle<extra></extra>",
-      "chart.hoverOverlayTemplate": "<b>%{x}</b><br>{{label}}: %{customdata[0]}<br>%{customdata[1]} Modelle<extra></extra>",
-      "chart.hoverDirectionTemplate": "<b>%{x}</b><br>Wind aus %{customdata[1]} (%{customdata[0]})<br>Streuung: ±%{customdata[2]}<br>%{customdata[3]} Modelle<extra></extra>",
+      "chart.hoverMeanTemplate": "<b>%{customdata[2]}</b><br>Mittelwert: %{customdata[0]}<br>%{customdata[1]} Modelle<extra></extra>",
+      "chart.hoverOverlayTemplate": "<b>%{customdata[2]}</b><br>{{label}}: %{customdata[0]}<br>%{customdata[1]} Modelle<extra></extra>",
+      "chart.hoverDirectionTemplate": "<b>%{customdata[4]}</b><br>Wind aus %{customdata[1]} (%{customdata[0]})<br>Streuung: ±%{customdata[2]}<br>%{customdata[3]} Modelle<extra></extra>",
       "models.title": "Genutzte Modelle je Parameter",
       "models.summary": "Abgefragt für diesen Ort: {{models}} ({{count}} Modelle).",
       "models.used": "{{used}} von {{total}}: {{models}}",
@@ -147,9 +147,9 @@ const I18n = (() => {
       "chart.legendStd": "1σ spread",
       "chart.legendMean": "Mean",
       "chart.legendDirection": "Wind direction (arrows)",
-      "chart.hoverMeanTemplate": "<b>%{x}</b><br>Mean: %{customdata[0]}<br>%{customdata[1]} models<extra></extra>",
-      "chart.hoverOverlayTemplate": "<b>%{x}</b><br>{{label}}: %{customdata[0]}<br>%{customdata[1]} models<extra></extra>",
-      "chart.hoverDirectionTemplate": "<b>%{x}</b><br>Wind from %{customdata[1]} (%{customdata[0]})<br>Spread: ±%{customdata[2]}<br>%{customdata[3]} models<extra></extra>",
+      "chart.hoverMeanTemplate": "<b>%{customdata[2]}</b><br>Mean: %{customdata[0]}<br>%{customdata[1]} models<extra></extra>",
+      "chart.hoverOverlayTemplate": "<b>%{customdata[2]}</b><br>{{label}}: %{customdata[0]}<br>%{customdata[1]} models<extra></extra>",
+      "chart.hoverDirectionTemplate": "<b>%{customdata[4]}</b><br>Wind from %{customdata[1]} (%{customdata[0]})<br>Spread: ±%{customdata[2]}<br>%{customdata[3]} models<extra></extra>",
       "models.title": "Models used per parameter",
       "models.summary": "Requested for this place: {{models}} ({{count}} models).",
       "models.used": "{{used}} of {{total}}: {{models}}",
@@ -215,9 +215,9 @@ const I18n = (() => {
       "chart.legendStd": "écart 1σ",
       "chart.legendMean": "Moyenne",
       "chart.legendDirection": "Direction du vent (flèches)",
-      "chart.hoverMeanTemplate": "<b>%{x}</b><br>Moyenne : %{customdata[0]}<br>%{customdata[1]} modèles<extra></extra>",
-      "chart.hoverOverlayTemplate": "<b>%{x}</b><br>{{label}} : %{customdata[0]}<br>%{customdata[1]} modèles<extra></extra>",
-      "chart.hoverDirectionTemplate": "<b>%{x}</b><br>Vent venant de %{customdata[1]} (%{customdata[0]})<br>Écart : ±%{customdata[2]}<br>%{customdata[3]} modèles<extra></extra>",
+      "chart.hoverMeanTemplate": "<b>%{customdata[2]}</b><br>Moyenne : %{customdata[0]}<br>%{customdata[1]} modèles<extra></extra>",
+      "chart.hoverOverlayTemplate": "<b>%{customdata[2]}</b><br>{{label}} : %{customdata[0]}<br>%{customdata[1]} modèles<extra></extra>",
+      "chart.hoverDirectionTemplate": "<b>%{customdata[4]}</b><br>Vent venant de %{customdata[1]} (%{customdata[0]})<br>Écart : ±%{customdata[2]}<br>%{customdata[3]} modèles<extra></extra>",
       "models.title": "Modèles utilisés par paramètre",
       "models.summary": "Interrogés pour ce lieu : {{models}} ({{count}} modèles).",
       "models.used": "{{used}} sur {{total}} : {{models}}",
@@ -283,9 +283,9 @@ const I18n = (() => {
       "chart.legendStd": "dispersión 1σ",
       "chart.legendMean": "Media",
       "chart.legendDirection": "Dirección del viento (flechas)",
-      "chart.hoverMeanTemplate": "<b>%{x}</b><br>Media: %{customdata[0]}<br>%{customdata[1]} modelos<extra></extra>",
-      "chart.hoverOverlayTemplate": "<b>%{x}</b><br>{{label}}: %{customdata[0]}<br>%{customdata[1]} modelos<extra></extra>",
-      "chart.hoverDirectionTemplate": "<b>%{x}</b><br>Viento del %{customdata[1]} (%{customdata[0]})<br>Dispersión: ±%{customdata[2]}<br>%{customdata[3]} modelos<extra></extra>",
+      "chart.hoverMeanTemplate": "<b>%{customdata[2]}</b><br>Media: %{customdata[0]}<br>%{customdata[1]} modelos<extra></extra>",
+      "chart.hoverOverlayTemplate": "<b>%{customdata[2]}</b><br>{{label}}: %{customdata[0]}<br>%{customdata[1]} modelos<extra></extra>",
+      "chart.hoverDirectionTemplate": "<b>%{customdata[4]}</b><br>Viento del %{customdata[1]} (%{customdata[0]})<br>Dispersión: ±%{customdata[2]}<br>%{customdata[3]} modelos<extra></extra>",
       "models.title": "Modelos utilizados por parámetro",
       "models.summary": "Consultados para este lugar: {{models}} ({{count}} modelos).",
       "models.used": "{{used}} de {{total}}: {{models}}",
@@ -351,9 +351,9 @@ const I18n = (() => {
       "chart.legendStd": "dispersione 1σ",
       "chart.legendMean": "Media",
       "chart.legendDirection": "Direzione del vento (frecce)",
-      "chart.hoverMeanTemplate": "<b>%{x}</b><br>Media: %{customdata[0]}<br>%{customdata[1]} modelli<extra></extra>",
-      "chart.hoverOverlayTemplate": "<b>%{x}</b><br>{{label}}: %{customdata[0]}<br>%{customdata[1]} modelli<extra></extra>",
-      "chart.hoverDirectionTemplate": "<b>%{x}</b><br>Vento da %{customdata[1]} (%{customdata[0]})<br>Dispersione: ±%{customdata[2]}<br>%{customdata[3]} modelli<extra></extra>",
+      "chart.hoverMeanTemplate": "<b>%{customdata[2]}</b><br>Media: %{customdata[0]}<br>%{customdata[1]} modelli<extra></extra>",
+      "chart.hoverOverlayTemplate": "<b>%{customdata[2]}</b><br>{{label}}: %{customdata[0]}<br>%{customdata[1]} modelli<extra></extra>",
+      "chart.hoverDirectionTemplate": "<b>%{customdata[4]}</b><br>Vento da %{customdata[1]} (%{customdata[0]})<br>Dispersione: ±%{customdata[2]}<br>%{customdata[3]} modelli<extra></extra>",
       "models.title": "Modelli utilizzati per parametro",
       "models.summary": "Richiesti per questo luogo: {{models}} ({{count}} modelli).",
       "models.used": "{{used}} di {{total}}: {{models}}",
@@ -452,10 +452,6 @@ const I18n = (() => {
     return mode === "daily" ? formats.daily : formats.hourly;
   }
 
-  function hoverFormat(mode) {
-    return mode === "daily" ? "%a" : "%a %H:%M";
-  }
-
   function gemName() {
     if (currentLang === "de") return "Kanada GEM";
     if (currentLang === "es") return "Canadá GEM";
@@ -472,7 +468,6 @@ const I18n = (() => {
     cardinals,
     weekdays,
     tickFormat,
-    hoverFormat,
     gemName,
     supported: SUPPORTED,
     languages: LANGUAGES,

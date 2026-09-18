@@ -85,11 +85,14 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   `wallClockMs`/`isoLocal`. Bei Zoom/Pan im `plotly_relayout`-Handler über
   `hourlyTickLayout()` neu setzen (zusammen mit den Annotationen in einem
   `Plotly.relayout`). Tagesmodus: `tickmode: "array"` mit allen Block-Timestamps
-  als `tickvals` und `tickformat: "%a"`, damit kein Tag ausgelassen wird.
-- **Hover-Tooltips:** `xaxis.hoverformat` aus `I18n.hoverFormat(mode)` statt
-  Datum: stündlich `"%a %H:%M"` (z. B. `Do 14:00`), täglich `"%a"`. Die
-  Plotly-Locale-`shortDays` sind deckungsgleich mit `I18n.WEEKDAYS`; `%{x}` in
-  den Templates bleibt dadurch lokalisiert.
+  als `tickvals` und `ticktext` aus `weekdayName()`, damit kein Tag ausgelassen
+  wird. Wochentage kommen immer aus `I18n.weekdays()` (nicht aus der
+  Plotly-Locale, die hier nicht zuverlässig greift).
+- **Hover-Tooltips:** Statt `%{x}`/`hoverformat` wird das x-Label per
+  `hoverXLabel()` in `frontend/app.js` berechnet und als **letztes**
+  `customdata`-Element übergeben: stündlich `weekdayName + " HH:MM"` (z. B.
+  `Do 14:00`), täglich nur `weekdayName`. Templates nutzen `%{customdata[2]}`
+  (Mittelwert/Overlay) bzw. `%{customdata[4]}` (Windrichtung).
 - **Zahlenformat:** Immer über `formatNumber`/`formatValue` in `frontend/app.js`
   (Locale aus `I18n.locale()`, eine Nachkommastelle, Einheit). Plotly-Hover
   nutzt deshalb vorformatierte Werte in `customdata` statt `%{y:.2f}`, weil

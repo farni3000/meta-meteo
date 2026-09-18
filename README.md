@@ -100,21 +100,24 @@ Die Oberfläche läuft in fünf Sprachen; die Auswahl steht oben rechts und wird
 | Italienisch | `it-IT` | Komma | `1013,2` |
 
 Nur Englisch verwendet den Punkt als Dezimaltrenner. Die Zahlen kommen aus
-`Intl.NumberFormat`, die Datumsformate (Chart-Achse, Hover, „Aktualisiert“) aus
-der jeweiligen Locale; für die Plotly-Hover werden zusätzlich die
-Locale-Bundles von der Plotly-CDN geladen. Bei vierstelligen Werten gruppieren
+`Intl.NumberFormat`, die Datumsformate („Aktualisiert“) aus der jeweiligen
+Locale; für die Plotly-Oberfläche werden zusätzlich die Locale-Bundles von der
+Plotly-CDN geladen. Die Wochentagskürzel der Charts stammen bewusst aus
+`I18n.WEEKDAYS` statt aus der Plotly-Locale, damit sie auch ohne
+Locale-Registrierung sprachrichtig bleiben. Bei vierstelligen Werten gruppieren
 Spanisch und Italienisch standardkonform nicht (`1013,2` statt `1.013,2`); das
 ist CLDR-Verhalten und bewusst so belassen.
 
 Die X-Achse beschriftet die Charts sprachrichtig: Im Stundenmodus steht an
-Tagesgrenzen (Mitternacht) das lokalisierte Wochentagskürzel (z. B. `Mo`, `Thu`,
-`Jeu`, `Jue`, `Gio`), dazwischen die Uhrzeit; im Tagesmodus wird jeder Tag mit
-seinem Wochentag beschriftet, kein Tag wird ausgelassen. Die Tick-Positionen
-werden passend zur sichtbaren Spanne gewählt und bei Zoom/Pan neu berechnet.
+Tagesgrenzen (Mitternacht) das Wochentagskürzel (z. B. `Mo`, `Thu`, `Jeu`,
+`Jue`, `Gio`), dazwischen die Uhrzeit; im Tagesmodus wird jeder Tag mit seinem
+Wochentag beschriftet, kein Tag wird ausgelassen. Die Tick-Positionen werden
+passend zur sichtbaren Spanne gewählt und bei Zoom/Pan neu berechnet.
 
-Der Hover-Tooltip zeigt statt des Datums dasselbe lokalisierte
-Wochentagskürzel: im Stundenmodus zusammen mit der Uhrzeit (z. B. `Do 14:00`),
-im Tagesmodus als alleiniges Kürzel.
+Der Hover-Tooltip zeigt statt des Datums dasselbe Wochentagskürzel: im
+Stundenmodus zusammen mit der Uhrzeit (z. B. `Do 14:00`), im Tagesmodus als
+alleiniges Kürzel. Das Kürzel wird aus dem X-Wert berechnet und als
+`customdata` an die Hover-Templates übergeben.
 
 Eine neue Sprache ergänzen: Eintrag in `TRANSLATIONS`, `LOCALES`, `CARDINALS`,
 `TICK_FORMATS` und `LANGUAGES` in `frontend/i18n.js` (alle Schlüssel müssen
