@@ -131,6 +131,7 @@ const modelsPanel = document.getElementById("models-panel");
 const modelsSummary = document.getElementById("models-summary");
 const modelsList = document.getElementById("models-list");
 const resetZoomBtn = document.getElementById("reset-zoom");
+const refreshBtn = document.getElementById("refresh");
 const favoritesEl = document.getElementById("favorites");
 
 function setStatus(message, isError = false) {
@@ -374,7 +375,7 @@ async function persistOrder() {
   }
 }
 
-async function selectLocation(location) {
+async function selectLocation(location, options = {}) {
   state.selected = location;
   searchInput.value = location.name;
   closeSuggestions();
@@ -385,6 +386,7 @@ async function selectLocation(location) {
       lon: location.longitude,
       days: 7,
     });
+    if (options.refresh) params.set("refresh", "1");
     if (location.name) params.set("name", location.name);
     if (location.country) params.set("country", location.country);
     if (location.admin1) params.set("admin1", location.admin1);
@@ -401,6 +403,16 @@ async function selectLocation(location) {
     render();
   } catch (error) {
     setStatus(t("status.forecastError", { message: error.message }), true);
+  }
+}
+
+async function refreshForecast() {
+  if (!state.selected || refreshBtn.disabled) return;
+  refreshBtn.disabled = true;
+  try {
+    await selectLocation(state.selected, { refresh: true });
+  } finally {
+    refreshBtn.disabled = false;
   }
 }
 
@@ -1211,6 +1223,7 @@ function render() {
   renderModelsPanel();
   renderFavorites();
   resetZoomBtn.hidden = false;
+  refreshBtn.hidden = false;
   windowHint.textContent = state.mode === "hourly" ? t("window.hint") : "";
   setStatus(t("status.ready"));
 }
@@ -1240,6 +1253,9 @@ function applyStaticTranslations() {
   document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   });
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    el.title = t(el.dataset.i18nTitle);
+  });
 }
 
 const languageSelect = document.getElementById("language-select");
@@ -1265,6 +1281,8 @@ async function changeLanguage(lang) {
 languageSelect.addEventListener("change", (event) => changeLanguage(event.target.value));
 
 resetZoomBtn.addEventListener("click", resetZoom);
+
+refreshBtn.addEventListener("click", refreshForecast);
 
 document.getElementById("resolution-toggle").addEventListener("click", (event) => {
   const button = event.target.closest("button");

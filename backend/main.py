@@ -111,10 +111,11 @@ async def forecast(
     country: Optional[str] = Query(None),
     admin1: Optional[str] = Query(None),
     tz: Optional[str] = Query(None),
+    refresh: bool = Query(False),
 ) -> ForecastResponse:
     model_list = _resolve_models(models)
     cache_key = f"{lat:.3f}:{lon:.3f}:{days}:{','.join(sorted(model_list))}"
-    cached = _cache.get(cache_key)
+    cached = None if refresh else _cache.get(cache_key)
     if cached is not None:
         cached.now = _local_now(cached.location.timezone)
         return cached

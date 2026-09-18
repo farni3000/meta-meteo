@@ -71,6 +71,9 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
 - Zoom-Sync: Button „Zoom auf alle“ in jedem Chart überträgt den sichtbaren
   Zeitbereich auf alle anderen Charts; „Zoom zurücksetzen“ stellt die
   Standardansicht wieder her.
+- Aktualisieren: Der Button lädt die Vorhersage für den aktuellen Ort neu und
+  umgeht dabei den Server-Cache (`refresh=1`), sodass frische Modelldaten
+  abgefragt werden, ohne den Ort wechseln zu müssen.
 - Favoriten: Ort per Stern hinzufügen/entfernen; Chips rechts neben der Suche,
   klickbar, per Drag & Drop sortierbar, serverseitig in `data/favorites.json`
   persistiert.
@@ -178,6 +181,7 @@ Liefert eine Liste möglicher Orte (`name`, `country`, `admin1`, `latitude`,
 | `days` | Vorhersagetage, 1–16 (Default 7) |
 | `models` | Komma-separierte Modellliste (Default aus Config) |
 | `name`, `country`, `admin1`, `tz` | Optionale Metadaten für die Anzeige |
+| `refresh` | `true`, um den Cache zu umgehen und frische Modelldaten zu laden |
 
 Antwort (gekürzt):
 

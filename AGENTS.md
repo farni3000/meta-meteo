@@ -62,6 +62,10 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   wird pro Request frisch gesetzt. Das Frontend setzt `xaxis.minallowed` auf
   diesen Wert (stündlich) bzw. auf 00:00 heute (täglich), damit vergangene Daten
   auch per Zoom/Pan unsichtbar bleiben.
+- **Aktualisieren:** Der Refresh-Button ruft `selectLocation(state.selected,
+  { refresh: true })` auf; `refresh=1` an `/api/forecast` überspringt den
+  TTL-Cache-Lookup, holt frische Modelldaten und überschreibt danach den
+  Cache-Eintrag.
 - **Internationalisierung:** Keine UI-Strings direkt im Code – neue Texte als Key
   in allen fünf Sprachen in `frontend/i18n.js` (`TRANSLATIONS`), Abruf über `t()`
   (Interpolation mit `{{var}}`). `CHARTS` nutzt `labelKey`/`infoKey` (Overlays,

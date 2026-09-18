@@ -198,6 +198,7 @@
       font-size: 0.9rem;
     }
     .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn:disabled { opacity: 0.6; cursor: default; }
     .btn[hidden] { display: none; }
     #status { color: var(--muted); font-size: 0.9rem; }
     #status.error { color: var(--error); }
@@ -363,6 +364,7 @@
         <button data-mode="daily" data-i18n="mode.daily">täglich</button>
       </div>
       <span id="window-hint"></span>
+      <button id="refresh" class="btn" data-i18n="toolbar.refresh" data-i18n-title="toolbar.refreshTitle" hidden>Aktualisieren</button>
       <button id="reset-zoom" class="btn" data-i18n="toolbar.resetZoom" hidden>Zoom für alle zurücksetzen</button>
       <span id="status"></span>
     </div>
