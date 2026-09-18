@@ -386,7 +386,10 @@ async function selectLocation(location, options = {}) {
       lon: location.longitude,
       days: 7,
     });
-    if (options.refresh) params.set("refresh", "1");
+    if (options.refresh) {
+      params.set("refresh", "1");
+      params.set("_", Date.now());
+    }
     if (location.name) params.set("name", location.name);
     if (location.country) params.set("country", location.country);
     if (location.admin1) params.set("admin1", location.admin1);
@@ -1265,20 +1268,25 @@ function renderModelsPanel() {
 function renderLocationMeta() {
   const { location, models_requested, models_used, generated_at } = state.data;
   const place = [location.name, location.admin1, location.country].filter(Boolean).join(", ");
-  const parts = [
+
+  locationMeta.innerHTML = "";
+  const text = document.createElement("span");
+  text.append(
     place,
+    " · ",
     t("location.modelsWithData", {
       used: models_used.length,
       total: models_requested.length,
     }),
-    t("location.updated", {
-      datetime: new Date(generated_at).toLocaleString(locale()),
-    }),
-  ];
-
-  locationMeta.innerHTML = "";
-  const text = document.createElement("span");
-  text.textContent = parts.join(" · ");
+    " · "
+  );
+  const updated = document.createElement("span");
+  updated.className = "meta-updated";
+  updated.textContent = t("location.updated", {
+    datetime: new Date(generated_at).toLocaleString(locale()),
+  });
+  updated.title = t("location.updatedTitle");
+  text.appendChild(updated);
   locationMeta.appendChild(text);
 
   const alreadyFavorite = isFavorite(state.selected);

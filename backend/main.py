@@ -58,7 +58,9 @@ app = FastAPI(title="MetaMeteo", version="1.0.0", lifespan=lifespan)
 async def disable_frontend_cache(request, call_next):
     response = await call_next(request)
     path = request.url.path
-    if path == "/" or path.endswith((".html", ".js", ".css")):
+    if path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    elif path == "/" or path.endswith((".html", ".js", ".css")):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
 

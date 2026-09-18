@@ -15,7 +15,7 @@ if [ ! -d ".venv" ]; then
 fi
 
 echo "Starte Meta-Wetter auf ${URL} ..."
-.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port "${PORT}" &
+.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port "${PORT}" --reload &
 SERVER_PID=$!
 
 sleep 2

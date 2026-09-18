@@ -65,7 +65,12 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
 - **Aktualisieren:** Der Refresh-Button ruft `selectLocation(state.selected,
   { refresh: true })` auf; `refresh=1` an `/api/forecast` überspringt den
   TTL-Cache-Lookup, holt frische Modelldaten und überschreibt danach den
-  Cache-Eintrag.
+  Cache-Eintrag. Zusätzlich Cache-Buster `_=Date.now()`. `/api/*` wird per
+  Middleware mit `Cache-Control: no-store` ausgeliefert.
+- **`generated_at`:** UTC-Zeitpunkt des letzten frischen Modell-Abrufs, wird bei
+  Cache-Treffern nicht aktualisiert (kein Modelllauf-Zeitstempel). Das Frontend
+  zeigt ihn als „Daten abgerufen: …“ mit erklärendem Tooltip
+  (`location.updated`/`location.updatedTitle`).
 - **Internationalisierung:** Keine UI-Strings direkt im Code – neue Texte als Key
   in allen fünf Sprachen in `frontend/i18n.js` (`TRANSLATIONS`), Abruf über `t()`
   (Interpolation mit `{{var}}`). `CHARTS` nutzt `labelKey`/`infoKey` (Overlays,

@@ -73,7 +73,9 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   Standardansicht wieder her.
 - Aktualisieren: Der Button lädt die Vorhersage für den aktuellen Ort neu und
   umgeht dabei den Server-Cache (`refresh=1`), sodass frische Modelldaten
-  abgefragt werden, ohne den Ort wechseln zu müssen.
+  abgefragt werden, ohne den Ort wechseln zu müssen. Der angezeigte Wert „Daten
+  abgerufen: …“ ist der Server-Zeitpunkt dieses frischen Abrufs (nicht der
+  Modelllauf); bei Cache-Treffern bleibt er stehen, ein Tooltip erklärt das.
 - Favoriten: Ort per Stern hinzufügen/entfernen; Chips rechts neben der Suche,
   klickbar, per Drag & Drop sortierbar, serverseitig in `data/favorites.json`
   persistiert.
@@ -220,6 +222,14 @@ Antwort (gekürzt):
 Zeitzonen-Offset, identisch zu den Timestamps) und wird bei jedem Request frisch
 gesetzt – auch bei Cache-Treffern. Das Frontend nutzt sie als Startgrenze der
 x-Achse.
+
+`generated_at` ist der UTC-Zeitpunkt, an dem die Prognose zuletzt frisch von
+Open-Meteo geholt und aggregiert wurde. Bei einem Cache-Treffer wird der
+bestehende Wert unverändert zurückgegeben; `refresh=true` erzeugt einen neuen
+Wert. Es ist ausdrücklich **kein** Modelllauf-Zeitstempel (Open-Meteo liefert
+diesen in den genutzten Feldern nicht). API-Antworten erhalten
+`Cache-Control: no-store`, damit der Browser nicht selbst cached; zusätzlich
+hängt das Frontend beim Refresh einen Cache-Buster an.
 
 `std` ist die Populations-Standardabweichung (`ddof=0`) über alle Modelle mit Wert.
 Bei genau einem Modell ist `std = 0`; bei keinem Modell sind `mean`/`std` `null`.
