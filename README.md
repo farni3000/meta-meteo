@@ -45,8 +45,8 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   Tag erscheinen im stündlichen Modus nur die verbleibenden Stunden und nur dann,
   wenn noch mehr als drei Stunden übrig sind; Wert und Position beziehen sich
   dann auf den sichtbaren Rest. Im täglichen Modus wird der volle Tag verwendet.
-  Alles ist über das `annotations`-Feld im jeweiligen `CHARTS`-Eintrag
-  konfigurierbar.
+  Kennwerte, die auf `0,0` gerundet werden, werden ausgelassen; die Konfiguration
+  läuft über das `annotations`-Feld im jeweiligen `CHARTS`-Eintrag.
 - Einheitliche Zahlennotation: alle Werte in Hover-Tooltips und Chart-Annotationen
   werden mit einer Nachkommastelle und mit Einheit ausgegeben (z. B. `23,4 °C`,
   `3,2 mm`). Die Formatierung läuft zentral über `formatNumber`/`formatValue` mit

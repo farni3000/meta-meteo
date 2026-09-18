@@ -535,6 +535,7 @@ function dailyHighlights(param, context) {
         value = best.value;
         x = best.timestamp;
       }
+      if (Math.round(value * 10) === 0) return;
       highlights.push({ day: group.day, x, value, text: formatValue(value, unit) });
     });
   return highlights;

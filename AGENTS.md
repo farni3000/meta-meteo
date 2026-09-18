@@ -73,9 +73,10 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   rendert als graue Box mit farbigem Pfeil am Peak, `sum` als Box ohne Pfeil
   mittig im Tag. Vom angebrochenen ersten Tag zählt im stündlichen Modus nur der
   sichtbare Rest ab `now` – und nur, wenn mehr als 3 h übrig sind; im täglichen
-  Modus zählt der volle Tag. `computeYRange` schafft Platz für die Labels. Die
-  tägliche x-Achse reicht bis `nextDayString` des letzten Tags, damit die Labels
-  des letzten Tags nicht abgeschnitten werden.
+  Modus zählt der volle Tag. Kennwerte, die auf `0,0` gerundet werden, werden
+  ausgelassen. `computeYRange` schafft Platz für die Labels. Die tägliche
+  x-Achse reicht bis `nextDayString` des letzten Tags, damit die Labels des
+  letzten Tags nicht abgeschnitten werden.
 - **Dynamische Pfeile:** `dynamicArrow: true` am `annotations`-Eintrag lässt
   `resolveArrow`/`arrowOffset` den Pfeil x-abhängig neigen (Punkt außen → Label
   zur Mitte, max. 45°, `standoff` hält Abstand zum Punkt). Aktiv für die
