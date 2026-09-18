@@ -452,6 +452,10 @@ const I18n = (() => {
     return mode === "daily" ? formats.daily : formats.hourly;
   }
 
+  function hoverFormat(mode) {
+    return mode === "daily" ? "%a" : "%a %H:%M";
+  }
+
   function gemName() {
     if (currentLang === "de") return "Kanada GEM";
     if (currentLang === "es") return "Canadá GEM";
@@ -468,6 +472,7 @@ const I18n = (() => {
     cardinals,
     weekdays,
     tickFormat,
+    hoverFormat,
     gemName,
     supported: SUPPORTED,
     languages: LANGUAGES,

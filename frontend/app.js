@@ -1083,9 +1083,16 @@ function renderChart(param, block, series) {
       layout.xaxis.tickvals = tickvals;
       layout.xaxis.ticktext = ticktext;
     }
+    layout.xaxis.hoverformat = I18n.hoverFormat("hourly");
+  } else if (state.mode === "daily") {
+    layout.xaxis.tickmode = "array";
+    layout.xaxis.tickvals = timestamps;
+    layout.xaxis.tickformat = I18n.tickFormat("daily");
+    layout.xaxis.hoverformat = I18n.hoverFormat("daily");
   } else {
     layout.xaxis.nticks = 7;
-    layout.xaxis.tickformat = I18n.tickFormat(state.mode);
+    layout.xaxis.tickformat = I18n.tickFormat("hourly");
+    layout.xaxis.hoverformat = I18n.hoverFormat("hourly");
   }
   if (hasDirection) {
     layout.yaxis.domain = [0, 0.86];

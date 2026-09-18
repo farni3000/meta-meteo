@@ -84,7 +84,12 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   Schrittweite aus `[1,2,3,6,12,24]` so, dass ≤ 8 Ticks entstehen, Start per
   `wallClockMs`/`isoLocal`. Bei Zoom/Pan im `plotly_relayout`-Handler über
   `hourlyTickLayout()` neu setzen (zusammen mit den Annotationen in einem
-  `Plotly.relayout`). Tagesmodus bleibt bei `tickformat: "%a"`.
+  `Plotly.relayout`). Tagesmodus: `tickmode: "array"` mit allen Block-Timestamps
+  als `tickvals` und `tickformat: "%a"`, damit kein Tag ausgelassen wird.
+- **Hover-Tooltips:** `xaxis.hoverformat` aus `I18n.hoverFormat(mode)` statt
+  Datum: stündlich `"%a %H:%M"` (z. B. `Do 14:00`), täglich `"%a"`. Die
+  Plotly-Locale-`shortDays` sind deckungsgleich mit `I18n.WEEKDAYS`; `%{x}` in
+  den Templates bleibt dadurch lokalisiert.
 - **Zahlenformat:** Immer über `formatNumber`/`formatValue` in `frontend/app.js`
   (Locale aus `I18n.locale()`, eine Nachkommastelle, Einheit). Plotly-Hover
   nutzt deshalb vorformatierte Werte in `customdata` statt `%{y:.2f}`, weil

@@ -108,9 +108,13 @@ ist CLDR-Verhalten und bewusst so belassen.
 
 Die X-Achse beschriftet die Charts sprachrichtig: Im Stundenmodus steht an
 Tagesgrenzen (Mitternacht) das lokalisierte Wochentagskürzel (z. B. `Mo`, `Thu`,
-`Jeu`, `Jue`, `Gio`), dazwischen die Uhrzeit; im Tagesmodus nur der Wochentag.
-Die Tick-Positionen werden passend zur sichtbaren Spanne gewählt und bei
-Zoom/Pan neu berechnet.
+`Jeu`, `Jue`, `Gio`), dazwischen die Uhrzeit; im Tagesmodus wird jeder Tag mit
+seinem Wochentag beschriftet, kein Tag wird ausgelassen. Die Tick-Positionen
+werden passend zur sichtbaren Spanne gewählt und bei Zoom/Pan neu berechnet.
+
+Der Hover-Tooltip zeigt statt des Datums dasselbe lokalisierte
+Wochentagskürzel: im Stundenmodus zusammen mit der Uhrzeit (z. B. `Do 14:00`),
+im Tagesmodus als alleiniges Kürzel.
 
 Eine neue Sprache ergänzen: Eintrag in `TRANSLATIONS`, `LOCALES`, `CARDINALS`,
 `TICK_FORMATS` und `LANGUAGES` in `frontend/i18n.js` (alle Schlüssel müssen
