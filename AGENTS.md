@@ -99,6 +99,13 @@ liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
   Plotly sonst einen Punkt als Dezimaltrenner setzt. Datums-Ticks über
   `I18n.tickFormat(mode)`, Hover-Datum über die Plotly-Locale (`locale` in der
   `Plotly.newPlot`-Config, Bundle von der Plotly-CDN via `loadPlotlyLocale`).
+- **Modell-Infos dezent:** Über den Charts bleibt nur das Badge „nur täglich
+  aufgelöst“. Modellanzahl und -namen stehen im Info-Tooltip hinter dem Chart-Titel
+  (`chartInfoText`, Keys `chart.infoModels`/`models.coverage`), die Anzahl zusätzlich
+  im Hover-Tooltip der Werte (bleibt dort). Die Liste „Genutzte Modelle je Parameter“
+  ist ein standardmäßig zugeklapptes `<details>`-Panel; die Modellliste darin
+  verlinkt per `MODEL_DOCS` auf die Open-Meteo-Doku-Seite des jeweiligen Anbieters
+  (Link-Titel `models.docsLinkTitle`, Hinweis `models.docsNote`).
 - **Tages-Kennwerte im Chart:** Über ein `annotations`-Feld am `CHARTS`-Eintrag
   (`{ type: "max" | "sum" }`). `dailyHighlights` aggregiert dafür stets die
   **Stundenreihe** aus `state.data.hourly` je Kalendertag (Tagesmaximum bzw.

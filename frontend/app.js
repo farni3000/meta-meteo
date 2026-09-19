@@ -110,6 +110,16 @@ const DISPLAY_NAMES = {
   jma_seamless: "Japan JMA",
 };
 
+const MODEL_DOCS = {
+  icon_seamless: "https://open-meteo.com/en/docs/dwd-api",
+  gfs_seamless: "https://open-meteo.com/en/docs/gfs-api",
+  ecmwf_ifs025: "https://open-meteo.com/en/docs/ecmwf-api",
+  ukmo_seamless: "https://open-meteo.com/en/docs/ukmo-api",
+  meteofrance_seamless: "https://open-meteo.com/en/docs/meteofrance-api",
+  jma_seamless: "https://open-meteo.com/en/docs/jma-api",
+  gem_seamless: "https://open-meteo.com/en/docs/gem-api",
+};
+
 const state = {
   mode: "hourly",
   data: null,
@@ -142,6 +152,36 @@ function setStatus(message, isError = false) {
 function displayName(model) {
   if (model === "gem_seamless") return I18n.gemName();
   return DISPLAY_NAMES[model] || model;
+}
+
+function chartInfoText(param, series) {
+  const parts = [t(param.infoKey)];
+  if (series.models_used.length) {
+    parts.push(
+      t("chart.infoModels", {
+        used: series.models_used.length,
+        total: state.data.models_requested.length,
+        models: series.models_used.map(displayName).join(", "),
+      })
+    );
+  }
+  const counts = series.model_count || [];
+  if (counts.length && Math.min(...counts) < Math.max(...counts)) {
+    parts.push(
+      t("models.coverage", { min: Math.min(...counts), max: Math.max(...counts) })
+    );
+  }
+  return parts.join("\n\n");
+}
+
+function modelLink(model) {
+  const link = document.createElement("a");
+  link.href = MODEL_DOCS[model] || "https://open-meteo.com/en/docs";
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = displayName(model);
+  link.title = t("models.docsLinkTitle", { model: displayName(model) });
+  return link;
 }
 
 function formatNumber(value, digits = 1) {
@@ -966,8 +1006,9 @@ function renderChart(param, block, series) {
     const info = document.createElement("span");
     info.className = "info";
     info.textContent = "i";
-    info.title = t(param.infoKey);
-    info.setAttribute("aria-label", t(param.infoKey));
+    const infoText = chartInfoText(param, series);
+    info.title = infoText;
+    info.setAttribute("aria-label", infoText.replace(/\n+/g, " "));
     head.appendChild(info);
   }
   const applyZoom = document.createElement("button");
@@ -986,23 +1027,9 @@ function renderChart(param, block, series) {
     badge.textContent = t("badge.dailyOnly");
     badges.appendChild(badge);
   }
-  if (series.models_used.length === 1) {
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = t("badge.singleModel");
-    badges.appendChild(badge);
+  if (badges.children.length) {
+    card.appendChild(badges);
   }
-  const counts = series.model_count || [];
-  if (counts.length && Math.min(...counts) < Math.max(...counts)) {
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = t("badge.modelCount", {
-      min: Math.min(...counts),
-      max: Math.max(...counts),
-    });
-    badges.appendChild(badge);
-  }
-  card.appendChild(badges);
 
   const plot = document.createElement("div");
   card.appendChild(plot);
@@ -1227,10 +1254,16 @@ function renderCharts() {
 
 function renderModelsPanel() {
   const { models_requested } = state.data;
-  modelsSummary.textContent = t("models.summary", {
-    models: models_requested.map(displayName).join(", "),
+  const [prefix, suffix] = t("models.summary", {
     count: models_requested.length,
+  }).split("{{models}}");
+  modelsSummary.innerHTML = "";
+  modelsSummary.appendChild(document.createTextNode(prefix || ""));
+  models_requested.forEach((model, index) => {
+    if (index) modelsSummary.appendChild(document.createTextNode(", "));
+    modelsSummary.appendChild(modelLink(model));
   });
+  modelsSummary.appendChild(document.createTextNode(suffix || ""));
 
   modelsList.innerHTML = "";
   const block = state.data[state.mode];

@@ -288,32 +288,43 @@
       font-weight: 600;
     }
     .panel {
-      margin-top: 24px;
+      margin-top: 16px;
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px 20px;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.8rem;
     }
-    .panel h2 { margin: 0 0 12px; font-size: 1rem; }
+    .panel > summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .panel > summary:hover { color: var(--accent); }
+    .panel[open] > summary { margin-bottom: 8px; }
     .model-row {
       display: flex;
-      gap: 10px;
-      padding: 6px 0;
+      gap: 8px;
+      padding: 3px 0;
       border-bottom: 1px solid var(--border);
-      font-size: 0.9rem;
+      font-size: 0.78rem;
       flex-wrap: wrap;
     }
     .model-row:last-child { border-bottom: none; }
-    .model-row .name { min-width: 220px; font-weight: 600; }
+    .model-row .name { min-width: 170px; font-weight: 600; }
     .model-row .models {
       color: var(--muted);
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 1px;
     }
     .model-row .missing { color: #fbbf24; }
-    .model-row .coverage { color: #94a3b8; font-size: 0.82rem; }
-    #models-summary { margin: 0 0 12px; color: var(--muted); font-size: 0.85rem; }
+    .model-row .coverage { color: #94a3b8; font-size: 0.74rem; }
+    #models-summary { margin: 0 0 6px; color: var(--muted); font-size: 0.78rem; }
+    #models-summary a { color: var(--accent); text-decoration: none; }
+    #models-summary a:hover { text-decoration: underline; }
+    .docs-note { margin: 0 0 10px; color: var(--muted); font-size: 0.72rem; }
     @media (min-width: 900px) {
       .charts { grid-template-columns: 1fr 1fr; }
       .charts .chart-card.wide { grid-column: 1 / -1; }
@@ -377,11 +388,12 @@
 
     <div class="charts" id="charts"></div>
 
-    <div class="panel" id="models-panel" hidden>
-      <h2 data-i18n="models.title">Genutzte Modelle je Parameter</h2>
+    <details class="panel" id="models-panel" hidden>
+      <summary data-i18n="models.title">Genutzte Modelle je Parameter</summary>
       <p id="models-summary"></p>
+      <p class="docs-note" data-i18n="models.docsNote">Links führen zur Open-Meteo-Dokumentation der jeweiligen Modelle.</p>
       <div id="models-list"></div>
-    </div>
+    </details>
   </main>
   <script src="i18n.js"></script>
   <script src="app.js"></script>

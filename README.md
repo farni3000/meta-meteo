@@ -79,9 +79,12 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
 - Favoriten: Ort per Stern hinzufügen/entfernen; Chips rechts neben der Suche,
   klickbar, per Drag & Drop sortierbar, serverseitig in `data/favorites.json`
   persistiert.
-- Transparenz: pro Parameter wird angezeigt, welche Modelle tatsächlich eingeflossen
-  sind und welche fehlen; Badges für „nur 1 Modell“, „nur täglich aufgelöst“ und
-  schwankende Modellanzahl.
+- Transparenz: pro Parameter wird in einem standardmäßig eingeklappten Bereich
+  („Genutzte Modelle je Parameter“) aufgelistet, welche Modelle eingeflossen sind und
+  welche fehlen; die Modellliste oben verlinkt jeden Modellnamen zur passenden
+  Open-Meteo-Dokumentation. Über den Charts bleibt nur das Badge „nur täglich
+  aufgelöst“; Modellanzahl und -namen stehen im Info-Tooltip hinter dem Chart-Titel,
+  die Anzahl außerdem im Hover-Tooltip der Werte.
 - Kurzlebiger In-Memory-Cache (TTL 10 Minuten), Key = Koordinaten + Modellauswahl.
 - Kein Scheduler, kein Scraping, kein API-Key, kein LLM zur Laufzeit.
 
@@ -292,8 +295,8 @@ mittig im Tag.
 
 Bei den Standardmodellen liefert **nur `gfs_seamless`** einen UV-Index (stündlich
 und täglich); die übrigen liefern `null`-Arrays (kein Fehler). Ein UV-Fehlerband
-über mehrere Modelle ist daher derzeit nicht möglich – das Frontend kennzeichnet
-den UV-Chart mit dem Badge „nur 1 Modell“. Die Aggregationslogik bleibt generisch:
+über mehrere Modelle ist daher derzeit nicht möglich – das Frontend weist im
+Info-Tooltip des UV-Charts nur ein genutztes Modell aus. Die Aggregationslogik bleibt generisch:
 sobald weitere Modelle UV liefern, fließen sie automatisch ein.
 
 ## Weitere Modell-Einschränkungen
@@ -304,7 +307,8 @@ sie unter „Genutzte Modelle je Parameter“ aus.
 
 `sunshine_duration` liefert `ukmo_seamless` nur für ~2,6 Tage und
 `meteofrance_seamless` für ~5 Tage; die Modellanzahl sinkt entsprechend gegen Ende
-des Zeitraums und wird im Frontend als „Modellanzahl X–Y“ ausgewiesen.
+des Zeitraums und wird im Frontend im Info-Tooltip des Charts als „Modellanzahl über
+den Zeitraum: X–Y“ ausgewiesen.
 
 ## Projektstruktur
 
@@ -351,5 +355,5 @@ meta-meteo/
 
 Berlin (Mitteleuropa), Bremerhaven (Küste) und Innsbruck (Berg) mit den
 Default-Modellen sowie Tokyo (mit `models=jma_seamless,gfs_seamless,ecmwf_ifs025`).
-Alle Parameter liefern plausible Werte; Modellabdeckung und Badges werden im
-Frontend korrekt angezeigt.
+Alle Parameter liefern plausible Werte; Modellabdeckung (Info-Tooltip und
+eingeklapptes Modell-Panel) wird im Frontend korrekt angezeigt.
