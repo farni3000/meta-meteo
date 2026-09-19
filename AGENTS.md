@@ -1,134 +1,133 @@
 # AGENTS.md
 
-Kurzer Einstieg für Agenten. Die vollständige Doku (Setup, API, Konfiguration,
-Einschränkungen) steht in **[README.md](./README.md)** – bei Fragen zuerst dort
-nachsehen.
+Short introduction for agents. The full documentation (setup, API, configuration,
+limitations) is in **[README.md](./README.md)** – check there first if you have
+questions.
 
-## Was ist das
+## What this is
 
-**MetaMeteo** – lokale Web-App (FastAPI-Backend + statisches Browser-Frontend),
-die für einen Ort eine 7-Tage-Vorhersage aus mehreren Open-Meteo-Wettermodellen
-abfragt, pro Parameter Mittelwert + Streuung aggregiert und mit Plotly als Charts
-darstellt. Kein API-Key, kein Scheduler, kein LLM zur Laufzeit.
+**MetaMeteo** – local web app (FastAPI backend + static browser frontend) that
+fetches a 7-day forecast for a location from several Open-Meteo weather models,
+aggregates mean + spread per parameter and renders it as charts with Plotly. No
+API key, no scheduler, no LLM at runtime.
 
-## Struktur
+## Structure
 
 ```
 backend/
-  main.py          # FastAPI-App: /api/geocode, /api/forecast, /api/favorites, Cache, StaticFiles
-  config.py        # PARAMETER_SPECS, Modelllisten, TTL, DISPLAY_NAMES
-  models.py        # Pydantic-Response-Modelle + NormalizedForecast
-  aggregation.py   # Mittelwert/Std, zirkuläre Aggregation, Tagesfallback
-  cache.py         # In-Memory-TTL-Cache
-  favorites.py     # JSON-Persistenz (data/favorites.json)
+  main.py          # FastAPI app: /api/geocode, /api/forecast, /api/favorites, cache, StaticFiles
+  config.py        # PARAMETER_SPECS, model lists, TTL, DISPLAY_NAMES
+  models.py        # Pydantic response models + NormalizedForecast
+  aggregation.py   # mean/std, circular aggregation, daily fallback
+  cache.py         # in-memory TTL cache
+  favorites.py     # JSON persistence (data/favorites.json)
   sources/
-    open_meteo.py  # Open-Meteo Client, ein Request pro Modell
-    geocoding.py   # Open-Meteo Geocoding
+    open_meteo.py  # Open-Meteo client, one request per model
+    geocoding.py   # Open-Meteo geocoding
     base.py        # ForecastSource(ABC)
-  tests/           # pytest, laufen über backend/tests
+  tests/           # pytest, run via backend/tests
 frontend/
-  index.html       # Layout + CSS, lädt Plotly per CDN; Sprach-Select, data-i18n-Attribute
-  i18n.js          # Übersetzungen (de/en/fr/es/it), detectLang, t(), Locale, Kardinalrichtungen
-  app.js           # Chart-Konfiguration (CHARTS), Rendering, Favoriten, Zoom-Sync
+  index.html       # layout + CSS, loads Plotly via CDN; language select, data-i18n attributes
+  i18n.js          # translations (de/en/fr/es/it), detectLang, t(), locale, cardinal directions
+  app.js           # chart configuration (CHARTS), rendering, favorites, zoom sync
 ```
 
-## Datenfluss
+## Data flow
 
-`sources/open_meteo.py` normalisiert jede Modell-Antwort in `NormalizedForecast`
-(`models.py`). `aggregation.aggregate()` baut daraus je Auflösung (hourly/daily)
-einen `ResolutionBlock` mit `ParameterSeries` pro Parameter. `main.py` cached und
-liefert `ForecastResponse`. Das Frontend rendert pro Eintrag in `CHARTS`
-(`frontend/app.js`) eine Chart-Karte; `STD` wird als Fehlerband gezeichnet.
+`sources/open_meteo.py` normalises each model response into `NormalizedForecast`
+(`models.py`). `aggregation.aggregate()` builds from this a `ResolutionBlock`
+with a `ParameterSeries` per parameter for each resolution (hourly/daily).
+`main.py` caches and serves `ForecastResponse`. The frontend renders a chart
+card per entry in `CHARTS` (`frontend/app.js`); `STD` is drawn as an error band.
 
-## Wichtige Konventionen
+## Important conventions
 
-- **Parameter zentral definieren:** Neue Metrik = `ParameterSpec` in
-  `backend/config.py` plus Eintrag in `CHARTS` in `frontend/app.js`. Aggregation
-  und Cache sind generisch und brauchen keine Anpassung. Details in der README.
-- **Zirkuläre Größen:** Winkelwerte (z. B. `wind_direction_10m`) mit
-  `circular=True` markieren. Dann nutzt `aggregation.py` Vektor-Mittel
-  (`sin`/`cos` → `atan2`) und Kreissstandardabweichung statt arithmetischem
-  Mittel. Niemals Winkel arithmetisch mitteln.
-- **Ein Request pro Modell**, parallel via `asyncio.gather`.
-- **Fehlende Werte** werden ausgeschlossen, nie als 0 gewertet; fehlt alles,
-  sind `mean`/`std` `null`.
-- **Frontend-Konsolen-/DOM-Änderungen** ohne Build-Schritt: `frontend/app.js`
-  wird direkt geladen.
-- **Farbige Zonen im Chart:** Über ein `bands`-Feld am `CHARTS`-Eintrag
-  (`{ from, to, label, color }`) rendert `renderChart` gefüllte Bereiche,
-  Grenzlinien und rechtsbündige Labels; die y-Achse skaliert dazu dynamisch am
-  Datenbereich. Beispiel: die Druckbänder im Luftdruck-Chart.
-- **Datenstart ab jetzt:** `ForecastResponse.now` (Ortszeit, `YYYY-MM-DDTHH:mm`)
-  wird pro Request frisch gesetzt. Das Frontend setzt `xaxis.minallowed` auf
-  diesen Wert (stündlich) bzw. auf 00:00 heute (täglich), damit vergangene Daten
-  auch per Zoom/Pan unsichtbar bleiben.
-- **Aktualisieren:** Der Refresh-Button ruft `selectLocation(state.selected,
-  { refresh: true })` auf; `refresh=1` an `/api/forecast` überspringt den
-  TTL-Cache-Lookup, holt frische Modelldaten und überschreibt danach den
-  Cache-Eintrag. Zusätzlich Cache-Buster `_=Date.now()`. `/api/*` wird per
-  Middleware mit `Cache-Control: no-store` ausgeliefert.
-- **`generated_at`:** UTC-Zeitpunkt des letzten frischen Modell-Abrufs, wird bei
-  Cache-Treffern nicht aktualisiert (kein Modelllauf-Zeitstempel). Das Frontend
-  zeigt ihn als „Daten abgerufen: …“ mit erklärendem Tooltip
+- **Define parameters centrally:** new metric = `ParameterSpec` in
+  `backend/config.py` plus an entry in `CHARTS` in `frontend/app.js`. Aggregation
+  and cache are generic and need no adjustment. Details in the README.
+- **Circular quantities:** mark angle values (e.g. `wind_direction_10m`) with
+  `circular=True`. `aggregation.py` then uses the vector mean
+  (`sin`/`cos` → `atan2`) and circular standard deviation instead of the
+  arithmetic mean. Never average angles arithmetically.
+- **One request per model**, in parallel via `asyncio.gather`.
+- **Missing values** are excluded, never treated as 0; if all are missing,
+  `mean`/`std` are `null`.
+- **Frontend console/DOM changes** without a build step: `frontend/app.js`
+  is loaded directly.
+- **Coloured zones in the chart:** via a `bands` field on the `CHARTS` entry
+  (`{ from, to, label, color }`), `renderChart` renders filled areas, boundary
+  lines and right-aligned labels; the y-axis scales dynamically to the data
+  range. Example: the pressure bands in the air-pressure chart.
+- **Data start from now:** `ForecastResponse.now` (local time, `YYYY-MM-DDTHH:mm`)
+  is set fresh per request. The frontend sets `xaxis.minallowed` to this value
+  (hourly) or to 00:00 today (daily) so that past data stays invisible even via
+  zoom/pan.
+- **Refresh:** the refresh button calls `selectLocation(state.selected,
+  { refresh: true })`; `refresh=1` on `/api/forecast` skips the TTL cache
+  lookup, fetches fresh model data and then overwrites the cache entry.
+  Additionally a cache buster `_=Date.now()`. `/api/*` is served via middleware
+  with `Cache-Control: no-store`.
+- **`generated_at`:** UTC timestamp of the last fresh model fetch, not updated on
+  cache hits (no model-run timestamp). The frontend shows it as
+  "Data fetched: …" with an explanatory tooltip
   (`location.updated`/`location.updatedTitle`).
-- **Internationalisierung:** Keine UI-Strings direkt im Code – neue Texte als Key
-  in allen fünf Sprachen in `frontend/i18n.js` (`TRANSLATIONS`), Abruf über `t()`
-  (Interpolation mit `{{var}}`). `CHARTS` nutzt `labelKey`/`infoKey` (Overlays,
-  `direction`, `bands` analog), Auflösung erst beim Rendern. Sprache: Default aus
-  `navigator.languages`, Persistenz in `localStorage["metameteo.lang"]`; Wechsel
-  übersetzt live ohne neuen Request (`changeLanguage` → `render()`). Sprache
-  spezifisch außerdem `LOCALES`, `CARDINALS`, `WEEKDAYS`, `TICK_FORMATS`,
-  `gemName()`.
-- **X-Achse:** Im Stundenmodus baut `hourlyTicks(range)` eigene `tickvals`/
-  `ticktext` (Wochentag aus `I18n.weekdays()` um Mitternacht, sonst `HH:00`);
-  Schrittweite aus `[1,2,3,6,12,24]` so, dass ≤ 8 Ticks entstehen, Start per
-  `wallClockMs`/`isoLocal`. Bei Zoom/Pan im `plotly_relayout`-Handler über
-  `hourlyTickLayout()` neu setzen (zusammen mit den Annotationen in einem
-  `Plotly.relayout`). Tagesmodus: `tickmode: "array"` mit allen Block-Timestamps
-  als `tickvals` und `ticktext` aus `weekdayName()`, damit kein Tag ausgelassen
-  wird. Wochentage kommen immer aus `I18n.weekdays()` (nicht aus der
-  Plotly-Locale, die hier nicht zuverlässig greift).
-- **Hover-Tooltips:** Statt `%{x}`/`hoverformat` wird das x-Label per
-  `hoverXLabel()` in `frontend/app.js` berechnet und als **letztes**
-  `customdata`-Element übergeben: stündlich `weekdayName + " HH:MM"` (z. B.
-  `Do 14:00`), täglich nur `weekdayName`. Templates nutzen `%{customdata[2]}`
-  (Mittelwert/Overlay) bzw. `%{customdata[4]}` (Windrichtung).
-- **Zahlenformat:** Immer über `formatNumber`/`formatValue` in `frontend/app.js`
-  (Locale aus `I18n.locale()`, eine Nachkommastelle, Einheit). Plotly-Hover
-  nutzt deshalb vorformatierte Werte in `customdata` statt `%{y:.2f}`, weil
-  Plotly sonst einen Punkt als Dezimaltrenner setzt. Datums-Ticks über
-  `I18n.tickFormat(mode)`, Hover-Datum über die Plotly-Locale (`locale` in der
-  `Plotly.newPlot`-Config, Bundle von der Plotly-CDN via `loadPlotlyLocale`).
-- **Modell-Infos dezent:** Über den Charts bleibt nur das Badge „nur täglich
-  aufgelöst“. Modellanzahl und -namen stehen im Info-Tooltip hinter dem Chart-Titel
-  (`chartInfoText`, Keys `chart.infoModels`/`models.coverage`), die Anzahl zusätzlich
-  im Hover-Tooltip der Werte (bleibt dort). Die Liste „Genutzte Modelle je Parameter“
-  ist ein standardmäßig zugeklapptes `<details>`-Panel; die Modellliste darin
-  verlinkt per `MODEL_DOCS` auf die Open-Meteo-Doku-Seite des jeweiligen Anbieters
-  (Link-Titel `models.docsLinkTitle`, Hinweis `models.docsNote`).
-- **Tages-Kennwerte im Chart:** Über ein `annotations`-Feld am `CHARTS`-Eintrag
-  (`{ type: "max" | "sum" }`). `dailyHighlights` aggregiert dafür stets die
-  **Stundenreihe** aus `state.data.hourly` je Kalendertag (Tagesmaximum bzw.
-  Tagessumme), damit die Werte auch in der Tagesansicht stimmen
-  (`temperature_2m`/`pressure_msl` liegen täglich nur als `_mean` vor). `max`
-  rendert als graue Box mit farbiger Verbindungslinie ohne Pfeilkopf am Peak
-  (`arrowhead: 0`), `sum` als Box ohne Linie
-  mittig im Tag; `pinToTop: true` (Sonnenstunden) setzt sie per `yref: "paper"`
-  an den oberen Chartrand und skaliert die y-Achse mit erhöhtem Kopfraum
-  (`computeYRange`, top-Faktor 0,3), damit der Wert nicht mit der Stundenkurve
-  kollidiert. Vom angebrochenen ersten Tag zählt im stündlichen Modus nur der
-  sichtbare Rest ab `now` – und nur, wenn mehr als 3 h übrig sind; im täglichen
-  Modus zählt der volle Tag. Kennwerte, die auf `0,0` gerundet werden, werden
-  ausgelassen. `computeYRange` schafft Platz für die Labels. Die tägliche
-  x-Achse reicht bis `nextDayString` des letzten Tags, damit die Labels des
-  letzten Tags nicht abgeschnitten werden.
-- **Dynamische Verbindungslinien:** `dynamicArrow: true` am `annotations`-Eintrag
-  lässt `resolveArrow`/`arrowOffset` die kopfose Linie x-abhängig neigen (Punkt
-  außen → Label zur Mitte, max. 45°, `standoff` hält Abstand zum Punkt). Aktiv für
-  die Max-Charts, nicht bei `sum`. `chartXContext` liefert die sichtbare x-Spanne;
-  `rebuildAnnotations` wird bei Zoom/Pan/Reset über den `plotly_relayout`-Handler
-  neu aufgebaut. `paintAnnotationsUnderBoxes` dreht per `plotly_afterplot` die
-  SVG-Reihenfolge, damit die Box über dem Linienansatz liegt.
+- **Internationalisation:** no UI strings directly in the code – new texts as a
+  key in all five languages in `frontend/i18n.js` (`TRANSLATIONS`), retrieved via
+  `t()` (interpolation with `{{var}}`). `CHARTS` uses `labelKey`/`infoKey`
+  (overlays, `direction`, `bands` analogous), resolved only at render time.
+  Language: default from `navigator.languages`, persisted in
+  `localStorage["metameteo.lang"]`; switching translates live without a new
+  request (`changeLanguage` → `render()`). Language-specific also `LOCALES`,
+  `CARDINALS`, `WEEKDAYS`, `TICK_FORMATS`, `gemName()`.
+- **X-axis:** in hourly mode `hourlyTicks(range)` builds its own
+  `tickvals`/`ticktext` (weekday from `I18n.weekdays()` at midnight, otherwise
+  `HH:00`); step size from `[1,2,3,6,12,24]` such that ≤ 8 ticks result, start via
+  `wallClockMs`/`isoLocal`. On zoom/pan, reset in the `plotly_relayout` handler
+  via `hourlyTickLayout()` (together with the annotations in one
+  `Plotly.relayout`). Daily mode: `tickmode: "array"` with all block timestamps
+  as `tickvals` and `ticktext` from `weekdayName()` so that no day is omitted.
+  Weekdays always come from `I18n.weekdays()` (not from the Plotly locale, which
+  is not reliable here).
+- **Hover tooltips:** instead of `%{x}`/`hoverformat`, the x label is computed via
+  `hoverXLabel()` in `frontend/app.js` and passed as the **last** `customdata`
+  element: hourly `weekdayName + " HH:MM"` (e.g. `Thu 14:00`), daily only
+  `weekdayName`. Templates use `%{customdata[2]}` (mean/overlay) or
+  `%{customdata[4]}` (wind direction).
+- **Number format:** always via `formatNumber`/`formatValue` in `frontend/app.js`
+  (locale from `I18n.locale()`, one decimal place, unit). Plotly hover therefore
+  uses preformatted values in `customdata` instead of `%{y:.2f}`, because
+  otherwise Plotly uses a point as the decimal separator. Date ticks via
+  `I18n.tickFormat(mode)`, hover date via the Plotly locale (`locale` in the
+  `Plotly.newPlot` config, bundle from the Plotly CDN via `loadPlotlyLocale`).
+- **Model info understated:** above the charts only the "daily only" badge
+  remains. Model count and names are in the info tooltip behind the chart title
+  (`chartInfoText`, keys `chart.infoModels`/`models.coverage`), the count
+  additionally in the hover tooltip of the values (stays there). The "Models used
+  per parameter" list is a collapsed-by-default `<details>` panel; the model list
+  in it links via `MODEL_DOCS` to the Open-Meteo docs page of the respective
+  provider (link title `models.docsLinkTitle`, note `models.docsNote`).
+- **Daily highlights in the chart:** via an `annotations` field on the `CHARTS`
+  entry (`{ type: "max" | "sum" }`). `dailyHighlights` always aggregates the
+  **hourly series** from `state.data.hourly` per calendar day (daily maximum or
+  daily total) so that the values are also correct in the daily view
+  (`temperature_2m`/`pressure_msl` are only available daily as `_mean`). `max`
+  renders as a grey box with a coloured connector line without an arrowhead at
+  the peak (`arrowhead: 0`), `sum` as a box without a line centred in the day;
+  `pinToTop: true` (sunshine hours) places it via `yref: "paper"` at the top edge
+  of the chart and scales the y-axis with increased headroom
+  (`computeYRange`, top factor 0.3) so that the value does not collide with the
+  hourly curve. From the partial first day, only the visible remainder from `now`
+  counts in hourly mode – and only if more than 3 h are left; in daily mode the
+  full day counts. Highlights that round to `0.0` are omitted. `computeYRange`
+  makes room for the labels. The daily x-axis extends to `nextDayString` of the
+  last day so that the labels of the last day are not cut off.
+- **Dynamic connector lines:** `dynamicArrow: true` on the `annotations` entry
+  lets `resolveArrow`/`arrowOffset` tilt the headless line depending on x (point
+  outside → label towards the centre, max. 45°, `standoff` keeps distance to the
+  point). Active for the max charts, not for `sum`. `chartXContext` provides the
+  visible x span; `rebuildAnnotations` is rebuilt on zoom/pan/reset via the
+  `plotly_relayout` handler. `paintAnnotationsUnderBoxes` reorders the SVG via
+  `plotly_afterplot` so that the box lies over the start of the line.
 
 ## Tests
 
@@ -137,10 +136,10 @@ source .venv/bin/activate
 pytest
 ```
 
-Testfokus ist die Aggregationslogik (Mittelwert/Std, fehlende Werte,
-Ein-Modell-Fall, Tagesfallback, zirkuläre Windrichtung).
+The test focus is the aggregation logic (mean/std, missing values, single-model
+case, daily fallback, circular wind direction).
 
-## Starten
+## Running
 
 ```bash
 source .venv/bin/activate
@@ -148,4 +147,5 @@ uvicorn backend.main:app --reload
 # http://localhost:8000
 ```
 
-Alternativ `./start.command` (legt venv an, startet Server, öffnet Browser).
+Alternatively `./start.command` (creates the venv, starts the server, opens the
+browser).

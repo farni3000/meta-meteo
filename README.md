@@ -1,136 +1,136 @@
 # MetaMeteo
 
-Lokale Web-App (Backend + Browser-Frontend), die für einen Ort eine 7-Tage-Vorhersage
-aus mehreren unabhängigen Wettermodellen abfragt, pro Größe (Temperatur, Wind,
-Windrichtung, UV-Index, Niederschlagswahrscheinlichkeit, Niederschlagsmenge,
-Sonnenstunden, gefühlte Temperatur, Bewölkung, Luftdruck) Mittelwert und Streuung
-(Standardabweichung) zwischen den Modellen berechnet und als Chart mit Fehlerband
-darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
-(Vektorsumme) statt arithmetisch gemittelt.
+Local web app (backend + browser frontend) that fetches a 7-day forecast for a
+location from several independent weather models, computes the mean and spread
+(standard deviation) between the models for each quantity (temperature, wind,
+wind direction, UV index, precipitation probability, precipitation amount,
+sunshine hours, apparent temperature, cloud cover, air pressure) and displays it
+as a chart with an error band. Wind direction is a circular quantity and is
+averaged as a vector mean (vector sum) instead of an arithmetic mean.
 
 ## Features (v1)
 
-- Ortssuche mit Autocomplete über die Open-Meteo Geocoding API.
-- Abfrage mehrerer Modelle über die Open-Meteo Forecast API – ein Request pro Modell,
-  parallel per `asyncio.gather`.
-- Aggregation: Mittelwert + Populations-Standardabweichung über alle Modelle, die
-  für den jeweiligen Zeitschritt einen Wert liefern. Fehlende Werte werden
-  ausgeschlossen (nicht als 0 gewertet).
-- Zirkuläre Aggregation: Richtungswerte (z. B. 350° und 10°) werden über
-  Einheitsvektoren (`sin`/`cos` → `atan2`) gemittelt; die Streuung ist die
-  Kreissstandardabweichung `sqrt(-2·ln R)`.
-- Fehlerband als `mean ± 1σ` in einem Plotly-Chart je Parameter.
-- Windrichtung als gedrehte Pfeile im Wind-Chart (Strömungsrichtung, d. h. Pfeil
-  zeigt, wohin der Wind weht). Pfeile mit großer Modell-Uneinigkeit werden
-  transparenter; Hover zeigt Himmelsrichtung, Grad, Streuung und Modellanzahl.
-- Gestrichelte Overlays: gefühlte Temperatur im Temperatur-Chart, Bewölkung
-  (rechte Achse, %) im Sonnenstunden-Chart.
-- Farbige Druckbänder im Luftdruck-Chart: `<1000` Tiefdruck, `1000–1013` leicht
-  unterdurchschnittlich, `1013–1025` Normalbereich, `>1025` Hochdruck – jeweils
-  mit rechtsbündigem Label. Da `pressure_msl` auf Meeresniveau reduziert ist,
-  gelten die Grenzen unabhängig von der Höhenlage des Ortes. Die y-Achse skaliert
-  dynamisch am Datenbereich, sodass nur die relevanten Bänder sichtbar sind.
-- Umschalter „stündlich / täglich“; stündlich startet die Ansicht mit den ersten
-  3 Tagen (per Zoom alle 7 Tage).
-- Tages-Kennwerte direkt im Chart: Temperatur, Wind, UV-Index,
-  Niederschlagswahrscheinlichkeit und Luftdruck zeigen je Tag den
-  Tageshöchstwert, die Niederschlagsmenge und die Sonnenstunden die Tagessumme.
-  Die Werte werden immer
-  aus der Stundenreihe (`max` bzw. `sum` je Kalendertag) berechnet, damit sie
-  auch in der Tagesansicht korrekt sind. Max-Charts nutzen eine graue Box
-  (`#222e40`) mit farbigem Rand, farbigem Wert und dynamischer Verbindungslinie
-  ohne Pfeilkopf – je weiter der Tagespeak außen liegt, desto flacher zeigt die
-  Linie zur gegenüberliegenden Seite (max. 45°, `standoff` hält Abstand zum Punkt);
-  die Box wird über den Linienansatz gemalt und bei Zoom/Pan/Reset neu berechnet.
-  Die Summen-Box der Niederschlagsmenge sitzt ohne Linie mittig im Tag; die der Sonnenstunden
-  schwebt zusätzlich am oberen Chartrand (`pinToTop`) mit etwas Kopfraum, damit
-  die y-Achse an der Stundenreihe skaliert, der Wert aber nicht mit der Kurve
-  kollidiert.
-  Vom angebrochenen (ersten)
-  Tag erscheinen im stündlichen Modus nur die verbleibenden Stunden und nur dann,
-  wenn noch mehr als drei Stunden übrig sind; Wert und Position beziehen sich
-  dann auf den sichtbaren Rest. Im täglichen Modus wird der volle Tag verwendet.
-  Kennwerte, die auf `0,0` gerundet werden, werden ausgelassen; die Konfiguration
-  läuft über das `annotations`-Feld im jeweiligen `CHARTS`-Eintrag.
-- Einheitliche Zahlennotation: alle Werte in Hover-Tooltips und Chart-Annotationen
-  werden mit einer Nachkommastelle und mit Einheit ausgegeben (z. B. `23,4 °C`,
-  `3,2 mm`). Die Formatierung läuft zentral über `formatNumber`/`formatValue` mit
-  der sprachabhängigen Locale in `frontend/app.js`.
-- Mehrsprachige Oberfläche: Deutsch, Englisch, Französisch, Spanisch und
-  Italienisch, oben im Header umschaltbar. Der Default kommt aus der
-  Browsersprache, die Auswahl wird in `localStorage` (`metameteo.lang`)
-  gespeichert. Beim Umschalten werden alle Texte sowie Zahlen- und Datumsformate
-  live übersetzt – ohne Reload und ohne neuen Forecast-Request (die Daten selbst
-  sind sprachunabhängig). Einheiten bleiben in jeder Sprache gleich (kein
-  Fahrenheit o. Ä.). Die Übersetzungen und Formatdefinitionen liegen zentral in
+- Place search with autocomplete via the Open-Meteo Geocoding API.
+- Fetches several models via the Open-Meteo Forecast API – one request per model,
+  in parallel via `asyncio.gather`.
+- Aggregation: mean + population standard deviation across all models that
+  provide a value for the respective time step. Missing values are excluded (not
+  treated as 0).
+- Circular aggregation: direction values (e.g. 350° and 10°) are averaged via
+  unit vectors (`sin`/`cos` → `atan2`); the spread is the circular standard
+  deviation `sqrt(-2·ln R)`.
+- Error band as `mean ± 1σ` in one Plotly chart per parameter.
+- Wind direction as rotated arrows in the wind chart (flow direction, i.e. the
+  arrow points where the wind is blowing to). Arrows with high model disagreement
+  become more transparent; hover shows cardinal direction, degrees, spread and
+  model count.
+- Dashed overlays: apparent temperature in the temperature chart, cloud cover
+  (right axis, %) in the sunshine-hours chart.
+- Coloured pressure bands in the air-pressure chart: `<1000` low pressure,
+  `1000–1013` slightly below average, `1013–1025` normal range, `>1025` high
+  pressure – each with a right-aligned label. Because `pressure_msl` is reduced
+  to sea level, the thresholds apply regardless of the location's altitude. The
+  y-axis scales dynamically to the data range so that only the relevant bands are
+  visible.
+- "hourly / daily" toggle; hourly starts the view with the first 3 days (zoom out
+  for all 7 days).
+- Daily highlights directly in the chart: temperature, wind, UV index,
+  precipitation probability and air pressure show the daily maximum per day,
+  precipitation amount and sunshine hours the daily total. The values are always
+  computed from the hourly series (`max` or `sum` per calendar day) so that they
+  are also correct in the daily view. Max charts use a grey box (`#222e40`) with
+  a coloured border, coloured value and a dynamic connector line without an
+  arrowhead – the further the daily peak lies towards the outside, the flatter
+  the line points to the opposite side (max. 45°, `standoff` keeps distance to
+  the point); the box is painted over the line's start and recalculated on
+  zoom/pan/reset. The sum box for precipitation amount sits centred in the day
+  without a line; the one for sunshine hours additionally floats at the top edge
+  of the chart (`pinToTop`) with some headroom so that the y-axis scales to the
+  hourly series but the value does not collide with the curve. From the partial
+  (first) day, only the remaining hours appear in hourly mode and only if more
+  than three hours are left; the value and position then refer to the visible
+  remainder. In daily mode the full day is used. Highlights that round to `0.0`
+  are omitted; configuration is via the `annotations` field in the respective
+  `CHARTS` entry.
+- Consistent number notation: all values in hover tooltips and chart annotations
+  are output with one decimal place and a unit (e.g. `23.4 °C`, `3.2 mm`).
+  Formatting is centralised via `formatNumber`/`formatValue` with the
+  language-dependent locale in `frontend/app.js`.
+- Multilingual interface: German, English, French, Spanish and Italian,
+  switchable at the top of the header. The default comes from the browser
+  language, the selection is stored in `localStorage` (`metameteo.lang`).
+  Switching translates all texts as well as number and date formats live –
+  without a reload and without a new forecast request (the data itself is
+  language-independent). Units remain the same in every language (no Fahrenheit
+  etc.). The translations and format definitions are centralised in
   `frontend/i18n.js`.
-- Datenstart ab „jetzt“: Der stündliche Graph beginnt an der aktuellen Minute
-  (Ortszeit des Ortes). Eine harte Achsengrenze (`xaxis.minallowed`) verhindert,
-  dass vergangene Stunden – auch per Zoom oder Pan – sichtbar werden. Der
-  Tages-Chart startet mit dem heutigen Tag um 00:00.
-- Zoom-Sync: Button „Zoom auf alle“ in jedem Chart überträgt den sichtbaren
-  Zeitbereich auf alle anderen Charts; „Zoom zurücksetzen“ stellt die
-  Standardansicht wieder her.
-- Aktualisieren: Der Button lädt die Vorhersage für den aktuellen Ort neu und
-  umgeht dabei den Server-Cache (`refresh=1`), sodass frische Modelldaten
-  abgefragt werden, ohne den Ort wechseln zu müssen. Der angezeigte Wert „Daten
-  abgerufen: …“ ist der Server-Zeitpunkt dieses frischen Abrufs (nicht der
-  Modelllauf); bei Cache-Treffern bleibt er stehen, ein Tooltip erklärt das.
-- Favoriten: Ort per Stern hinzufügen/entfernen; Chips rechts neben der Suche,
-  klickbar, per Drag & Drop sortierbar, serverseitig in `data/favorites.json`
-  persistiert.
-- Transparenz: pro Parameter wird in einem standardmäßig eingeklappten Bereich
-  („Genutzte Modelle je Parameter“) aufgelistet, welche Modelle eingeflossen sind und
-  welche fehlen; die Modellliste oben verlinkt jeden Modellnamen zur passenden
-  Open-Meteo-Dokumentation. Über den Charts bleibt nur das Badge „nur täglich
-  aufgelöst“; Modellanzahl und -namen stehen im Info-Tooltip hinter dem Chart-Titel,
-  die Anzahl außerdem im Hover-Tooltip der Werte.
-- Kurzlebiger In-Memory-Cache (TTL 10 Minuten), Key = Koordinaten + Modellauswahl.
-- Kein Scheduler, kein Scraping, kein API-Key, kein LLM zur Laufzeit.
+- Data start from "now": the hourly graph begins at the current minute (local
+  time of the location). A hard axis limit (`xaxis.minallowed`) prevents past
+  hours from becoming visible – even via zoom or pan. The daily chart starts with
+  today at 00:00.
+- Zoom sync: the "Apply zoom to all" button in each chart transfers the visible
+  time range to all other charts; "Reset zoom" restores the default view.
+- Refresh: the button reloads the forecast for the current location and bypasses
+  the server cache (`refresh=1`) so that fresh model data is fetched without
+  changing the location. The displayed value "Data fetched: …" is the server
+  timestamp of this fresh fetch (not the model run); on cache hits it stays
+  unchanged, and a tooltip explains this.
+- Favorites: add/remove a location via the star; chips to the right of the
+  search, clickable, sortable via drag & drop, persisted server-side in
+  `data/favorites.json`.
+- Transparency: per parameter, a collapsed-by-default area ("Models used per
+  parameter") lists which models contributed and which are missing; the model
+  list above links each model name to the matching Open-Meteo documentation.
+  Above the charts only the "daily only" badge remains; model count and names are
+  in the info tooltip behind the chart title, and the count is also in the hover
+  tooltip of the values.
+- Short-lived in-memory cache (TTL 10 minutes), key = coordinates + model
+  selection.
+- No scheduler, no scraping, no API key, no LLM at runtime.
 
-## Sprachen und Zahlenformate
+## Languages and number formats
 
-Die Oberfläche läuft in fünf Sprachen; die Auswahl steht oben rechts und wird in
-`localStorage` gespeichert. Beim ersten Besuch entscheidet die Browsersprache
-(`navigator.languages`), sonst Englisch.
+The interface runs in five languages; the selection is at the top right and is
+stored in `localStorage`. On the first visit the browser language decides
+(`navigator.languages`), otherwise English.
 
-| Sprache | Locale | Dezimaltrenner | Beispiel (1013,2 hPa) |
+| Language | Locale | Decimal separator | Example (1013.2 hPa) |
 | --- | --- | --- | --- |
-| Deutsch | `de-DE` | Komma | `1.013,2` |
-| Englisch | `en-GB` | Punkt | `1,013.2` |
-| Französisch | `fr-FR` | Komma | `1 013,2` |
-| Spanisch | `es-ES` | Komma | `1013,2` |
-| Italienisch | `it-IT` | Komma | `1013,2` |
+| German | `de-DE` | comma | `1.013,2` |
+| English | `en-GB` | point | `1,013.2` |
+| French | `fr-FR` | comma | `1 013,2` |
+| Spanish | `es-ES` | comma | `1013,2` |
+| Italian | `it-IT` | comma | `1013,2` |
 
-Nur Englisch verwendet den Punkt als Dezimaltrenner. Die Zahlen kommen aus
-`Intl.NumberFormat`, die Datumsformate („Aktualisiert“) aus der jeweiligen
-Locale; für die Plotly-Oberfläche werden zusätzlich die Locale-Bundles von der
-Plotly-CDN geladen. Die Wochentagskürzel der Charts stammen bewusst aus
-`I18n.WEEKDAYS` statt aus der Plotly-Locale, damit sie auch ohne
-Locale-Registrierung sprachrichtig bleiben. Bei vierstelligen Werten gruppieren
-Spanisch und Italienisch standardkonform nicht (`1013,2` statt `1.013,2`); das
-ist CLDR-Verhalten und bewusst so belassen.
+Only English uses the point as the decimal separator. The numbers come from
+`Intl.NumberFormat`, the date formats ("Fetched") from the respective locale; for
+the Plotly interface the locale bundles are additionally loaded from the Plotly
+CDN. The weekday abbreviations of the charts deliberately come from
+`I18n.WEEKDAYS` instead of the Plotly locale so that they remain correct even
+without locale registration. For four-digit values, Spanish and Italian do not
+group, in line with the standard (`1013,2` instead of `1.013,2`); this is CLDR
+behaviour and deliberately left as is.
 
-Die X-Achse beschriftet die Charts sprachrichtig: Im Stundenmodus steht an
-Tagesgrenzen (Mitternacht) das Wochentagskürzel (z. B. `Mo`, `Thu`, `Jeu`,
-`Jue`, `Gio`), dazwischen die Uhrzeit; im Tagesmodus wird jeder Tag mit seinem
-Wochentag beschriftet, kein Tag wird ausgelassen. Die Tick-Positionen werden
-passend zur sichtbaren Spanne gewählt und bei Zoom/Pan neu berechnet.
+The x-axis labels the charts in the correct language: in hourly mode the weekday
+abbreviation appears at day boundaries (midnight) (e.g. `Mo`, `Thu`, `Jeu`,
+`Jue`, `Gio`), the time in between; in daily mode every day is labelled with its
+weekday, no day is omitted. Tick positions are chosen to match the visible span
+and recalculated on zoom/pan.
 
-Der Hover-Tooltip zeigt statt des Datums dasselbe Wochentagskürzel: im
-Stundenmodus zusammen mit der Uhrzeit (z. B. `Do 14:00`), im Tagesmodus als
-alleiniges Kürzel. Das Kürzel wird aus dem X-Wert berechnet und als
-`customdata` an die Hover-Templates übergeben.
+The hover tooltip shows the same weekday abbreviation instead of the date: in
+hourly mode together with the time (e.g. `Thu 14:00`), in daily mode as the sole
+abbreviation. The abbreviation is computed from the x value and passed to the
+hover templates as `customdata`.
 
-Eine neue Sprache ergänzen: Eintrag in `TRANSLATIONS`, `LOCALES`, `CARDINALS`,
-`TICK_FORMATS` und `LANGUAGES` in `frontend/i18n.js` (alle Schlüssel müssen
-vorhanden sein) sowie die Sprache in `GEOCODE_LANGUAGES` in `backend/config.py`
-für lokalisierte Ortsnamen. Das Frontend baut die Auswahl automatisch daraus auf.
+To add a new language: add an entry in `TRANSLATIONS`, `LOCALES`, `CARDINALS`,
+`TICK_FORMATS` and `LANGUAGES` in `frontend/i18n.js` (all keys must be present)
+as well as the language in `GEOCODE_LANGUAGES` in `backend/config.py` for
+localised place names. The frontend builds the selection automatically from this.
 
 ## Setup
 
-Voraussetzung: **Python 3.11+** (getestet mit 3.12). Das Standard-`python3` auf macOS
-kann älter sein – daher im Folgenden explizit `python3.12` verwenden.
+Requirement: **Python 3.11+** (tested with 3.12). The standard `python3` on macOS
+may be older – therefore use `python3.12` explicitly below.
 
 ```bash
 cd meta-meteo
@@ -139,31 +139,32 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Starten
+## Running
 
 ```bash
 source .venv/bin/activate
 uvicorn backend.main:app --reload
 ```
 
-Danach im Browser öffnen:
+Then open in the browser:
 
 ```text
 http://localhost:8000
 ```
 
-Das Frontend wird vom Backend als statische Datei ausgeliefert, daher ist kein
-separater Webserver und keine CORS-Konfiguration nötig.
+The frontend is served by the backend as a static file, so no separate web server
+and no CORS configuration is needed.
 
-Alternativ das Start-Skript verwenden (legt bei Bedarf die venv an, startet den
-Server und öffnet den Browser):
+Alternatively use the start script (creates the venv if needed, starts the server
+and opens the browser):
 
 ```bash
 ./start.command
-# oder per Doppelklick im Finder
+# or by double-clicking in Finder
 ```
 
-Der Port lässt sich über die Umgebungsvariable `META_METEO_PORT` ändern (Default 8000).
+The port can be changed via the environment variable `META_METEO_PORT` (default
+8000).
 
 ## Tests
 
@@ -172,40 +173,40 @@ source .venv/bin/activate
 pytest
 ```
 
-Die Tests decken die Aggregationslogik ab: Mittelwert/Populations-Std,
-Ausschluss fehlender Werte, Ein-Modell-Fall (Std = 0), komplett fehlende Reihen,
-den Rückfall auf Tageswerte, die zirkuläre Aggregation von Windrichtung
-(Vektor-Mittel über den Nordpunkt, Kreisspreizung, Tagesfallback) sowie die
-Ortszeit-Berechnung (`now`) inkl. UTC-Fallback.
+The tests cover the aggregation logic: mean/population std, exclusion of missing
+values, single-model case (std = 0), completely missing series, the fallback to
+daily values, the circular aggregation of wind direction (vector mean across the
+north point, circular spread, daily fallback) as well as the local-time
+calculation (`now`) incl. UTC fallback.
 
 ## API
 
 ### `GET /api/geocode`
 
-| Parameter | Beschreibung |
+| Parameter | Description |
 | --- | --- |
-| `query` | Suchbegriff (Pflicht) |
-| `count` | Max. Treffer, 1–20 (Default 8) |
-| `lang` | Sprache der Ortsnamen: `de`, `en`, `fr`, `es`, `it` (Default `de`) |
+| `query` | Search term (required) |
+| `count` | Max. results, 1–20 (default 8) |
+| `lang` | Language of place names: `de`, `en`, `fr`, `es`, `it` (default `de`) |
 
-Liefert eine Liste möglicher Orte (`name`, `country`, `admin1`, `latitude`,
-`longitude`, `timezone`) zur Disambiguierung.
+Returns a list of possible places (`name`, `country`, `admin1`, `latitude`,
+`longitude`, `timezone`) for disambiguation.
 
 ### `GET /api/forecast`
 
-| Parameter | Beschreibung |
+| Parameter | Description |
 | --- | --- |
-| `lat`, `lon` | Koordinaten (Pflicht) |
-| `days` | Vorhersagetage, 1–16 (Default 7) |
-| `models` | Komma-separierte Modellliste (Default aus Config) |
-| `name`, `country`, `admin1`, `tz` | Optionale Metadaten für die Anzeige |
-| `refresh` | `true`, um den Cache zu umgehen und frische Modelldaten zu laden |
+| `lat`, `lon` | Coordinates (required) |
+| `days` | Forecast days, 1–16 (default 7) |
+| `models` | Comma-separated model list (default from config) |
+| `name`, `country`, `admin1`, `tz` | Optional metadata for display |
+| `refresh` | `true` to bypass the cache and load fresh model data |
 
-Antwort (gekürzt):
+Response (abridged):
 
 ```json
 {
-  "location": {"name": "Berlin", "country": "Deutschland", "lat": 52.52, "lon": 13.41, "timezone": "Europe/Berlin"},
+  "location": {"name": "Berlin", "country": "Germany", "lat": 52.52, "lon": 13.41, "timezone": "Europe/Berlin"},
   "resolution": "hourly",
   "hourly": {
     "timestamps": ["2026-09-16T00:00", "..."],
@@ -228,103 +229,102 @@ Antwort (gekürzt):
 }
 ```
 
-`now` ist die aktuelle Ortszeit des Ortes im Format `YYYY-MM-DDTHH:mm` (ohne
-Zeitzonen-Offset, identisch zu den Timestamps) und wird bei jedem Request frisch
-gesetzt – auch bei Cache-Treffern. Das Frontend nutzt sie als Startgrenze der
-x-Achse.
+`now` is the current local time of the location in the format
+`YYYY-MM-DDTHH:mm` (without timezone offset, identical to the timestamps) and is
+set fresh on every request – including cache hits. The frontend uses it as the
+start limit of the x-axis.
 
-`generated_at` ist der UTC-Zeitpunkt, an dem die Prognose zuletzt frisch von
-Open-Meteo geholt und aggregiert wurde. Bei einem Cache-Treffer wird der
-bestehende Wert unverändert zurückgegeben; `refresh=true` erzeugt einen neuen
-Wert. Es ist ausdrücklich **kein** Modelllauf-Zeitstempel (Open-Meteo liefert
-diesen in den genutzten Feldern nicht). API-Antworten erhalten
-`Cache-Control: no-store`, damit der Browser nicht selbst cached; zusätzlich
-hängt das Frontend beim Refresh einen Cache-Buster an.
+`generated_at` is the UTC timestamp at which the forecast was last freshly
+fetched from Open-Meteo and aggregated. On a cache hit the existing value is
+returned unchanged; `refresh=true` produces a new value. It is explicitly **not**
+a model-run timestamp (Open-Meteo does not provide this in the fields used). API
+responses receive `Cache-Control: no-store` so the browser does not cache by
+itself; additionally the frontend appends a cache buster on refresh.
 
-`std` ist die Populations-Standardabweichung (`ddof=0`) über alle Modelle mit Wert.
-Bei genau einem Modell ist `std = 0`; bei keinem Modell sind `mean`/`std` `null`.
-`hourly` und `daily` sind immer beide enthalten, der Umschalter im Frontend arbeitet
-ohne neuen Request.
+`std` is the population standard deviation (`ddof=0`) across all models with a
+value. With exactly one model `std = 0`; with no model `mean`/`std` are `null`.
+`hourly` and `daily` are always both included, the toggle in the frontend works
+without a new request.
 
-### Favoriten-Endpoints
+### Favorites endpoints
 
-| Methode | Pfad | Zweck |
+| Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/favorites` | Liste in gespeicherter Reihenfolge |
-| `POST` | `/api/favorites` | Favorit hinzufügen (Duplikate werden ignoriert) |
-| `DELETE` | `/api/favorites/{id}` | Favorit entfernen (`id` = `lat,lon` auf 4 Stellen) |
-| `PUT` | `/api/favorites/order` | Reihenfolge setzen (`{"ids": [...]}`) |
+| `GET` | `/api/favorites` | List in stored order |
+| `POST` | `/api/favorites` | Add favorite (duplicates are ignored) |
+| `DELETE` | `/api/favorites/{id}` | Remove favorite (`id` = `lat,lon` to 4 decimals) |
+| `PUT` | `/api/favorites/order` | Set order (`{"ids": [...]}`) |
 
-Alle Endpoints liefern `{"favorites": [...]}`. Gespeichert wird in
-`data/favorites.json` (wird beim ersten Schreiben angelegt, ist gitignored).
+All endpoints return `{"favorites": [...]}`. Storage is in
+`data/favorites.json` (created on first write, is gitignored).
 
-## Konfiguration
+## Configuration
 
-`backend/config.py` steuert:
+`backend/config.py` controls:
 
-- `DEFAULT_MODELS` – Standardauswahl für Mitteleuropa:
+- `DEFAULT_MODELS` – default selection for Central Europe:
   `icon_seamless`, `gfs_seamless`, `ecmwf_ifs025`, `gem_seamless`,
   `ukmo_seamless`, `meteofrance_seamless`.
-- `ALLOWED_MODELS` – zusätzlich `jma_seamless` (v. a. für Asien-Pazifik sinnvoll).
-- `PARAMETER_SPECS` – je Parameter stündliche/tägliche API-Variable, optionale
-  Anzeige-Einheit, Skalierungsfaktor und `circular`-Flag. Daraus werden
-  `CANONICAL_PARAMS`, `HOURLY_VARIABLES`, `DAILY_VARIABLES`, `VALUE_SCALES`,
-  `UNIT_OVERRIDES` und `CIRCULAR_PARAMS` abgeleitet. Neue Metriken werden hier
-  ergänzt (plus Eintrag im Frontend).
-  Beispiel Sonnenstunden: `sunshine_duration`, `scale=1/3600`, `unit="h"`.
-  Beispiel Windrichtung: `wind_direction_10m`, `unit="°"`, `circular=True`,
-  täglich `wind_direction_10m_dominant`.
+- `ALLOWED_MODELS` – additionally `jma_seamless` (especially useful for the
+  Asia-Pacific region).
+- `PARAMETER_SPECS` – per parameter the hourly/daily API variable, optional
+  display unit, scale factor and `circular` flag. From this, `CANONICAL_PARAMS`,
+  `HOURLY_VARIABLES`, `DAILY_VARIABLES`, `VALUE_SCALES`, `UNIT_OVERRIDES` and
+  `CIRCULAR_PARAMS` are derived. New metrics are added here (plus an entry in the
+  frontend). Example sunshine hours: `sunshine_duration`, `scale=1/3600`,
+  `unit="h"`. Example wind direction: `wind_direction_10m`, `unit="°"`,
+  `circular=True`, daily `wind_direction_10m_dominant`.
 - `CACHE_TTL_SECONDS`, `FORECAST_MAX_DAYS`, `DISPLAY_NAMES`.
 
-Modellauswahl ist damit an einer Stelle änderbar und wird über den Query-Parameter
-`models` pro Request überschrieben.
+The model selection is therefore changeable in one place and is overridden per
+request via the query parameter `models`.
 
-Eine Metrik hinzufügen: `ParameterSpec` in `backend/config.py` ergänzen und einen
-Eintrag in der `CHARTS`-Liste in `frontend/app.js` (mit Label, Farbe, Tooltip)
-anlegen. Aggregation und Caching sind generisch und brauchen keine Anpassung.
-Für Winkelgrößen `circular=True` setzen, damit der Vektor-Mittelwert statt des
-arithmetischen Mittels verwendet wird. Soll die Größe als Pfeile in einem
-bestehenden Chart erscheinen, im Frontend-Eintrag `direction: { key, label }`
-ergänzen statt ein eigenes Chart anzulegen. Für einen Tages-Kennwert im Chart
-`annotations: { type: "max" | "sum" }` setzen. `max` zeigt den Tageshöchstwert am
-Ort des Peaks mit Verbindungslinie ohne Pfeilkopf (optional `dynamicArrow: true`
-für x-abhängige Neigung, max. 45°, Neuberechnung bei Zoom/Pan/Reset); `sum` die Tagessumme ohne Linie,
-mittig im Tag.
+Adding a metric: add a `ParameterSpec` in `backend/config.py` and an entry in the
+`CHARTS` list in `frontend/app.js` (with label, colour, tooltip). Aggregation and
+caching are generic and need no adjustment. For angle quantities set
+`circular=True` so that the vector mean is used instead of the arithmetic mean.
+If the quantity should appear as arrows in an existing chart, add
+`direction: { key, label }` to the frontend entry instead of creating a separate
+chart. For a daily highlight in the chart set
+`annotations: { type: "max" | "sum" }`. `max` shows the daily maximum at the
+position of the peak with a connector line without an arrowhead (optional
+`dynamicArrow: true` for x-dependent tilting, max. 45°, recalculation on
+zoom/pan/reset); `sum` the daily total without a line, centred in the day.
 
-## Bekannte Einschränkung: UV-Index
+## Known limitation: UV index
 
-Bei den Standardmodellen liefert **nur `gfs_seamless`** einen UV-Index (stündlich
-und täglich); die übrigen liefern `null`-Arrays (kein Fehler). Ein UV-Fehlerband
-über mehrere Modelle ist daher derzeit nicht möglich – das Frontend weist im
-Info-Tooltip des UV-Charts nur ein genutztes Modell aus. Die Aggregationslogik bleibt generisch:
-sobald weitere Modelle UV liefern, fließen sie automatisch ein.
+With the default models **only `gfs_seamless`** provides a UV index (hourly and
+daily); the others return `null` arrays (no error). A UV error band across
+multiple models is therefore currently not possible – the frontend indicates only
+one model used in the info tooltip of the UV chart. The aggregation logic remains
+generic: as soon as more models provide UV, they flow in automatically.
 
-## Weitere Modell-Einschränkungen
+## Further model limitations
 
-`precipitation_probability` fehlt bei `ukmo_seamless`, `meteofrance_seamless` und
-`jma_seamless`; die Aggregation nutzt dann nur die verfügbaren Modelle und weist
-sie unter „Genutzte Modelle je Parameter“ aus.
+`precipitation_probability` is missing from `ukmo_seamless`,
+`meteofrance_seamless` and `jma_seamless`; the aggregation then uses only the
+available models and lists them under "Models used per parameter".
 
-`sunshine_duration` liefert `ukmo_seamless` nur für ~2,6 Tage und
-`meteofrance_seamless` für ~5 Tage; die Modellanzahl sinkt entsprechend gegen Ende
-des Zeitraums und wird im Frontend im Info-Tooltip des Charts als „Modellanzahl über
-den Zeitraum: X–Y“ ausgewiesen.
+`sunshine_duration` is provided by `ukmo_seamless` only for ~2.6 days and by
+`meteofrance_seamless` for ~5 days; the model count therefore drops towards the
+end of the period and is shown in the frontend in the chart's info tooltip as
+"Model count over the period: X–Y".
 
-## Projektstruktur
+## Project structure
 
 ```
 meta-meteo/
   backend/
-    main.py              # FastAPI-App, Endpoints, Cache, StaticFiles
-    config.py            # Modellauswahl, Parametername-Mapping, TTL, Datenpfade
-    models.py            # Pydantic-Modelle + NormalizedForecast
-    aggregation.py       # Mittelwert/Std, Tagesfallback
-    cache.py             # TTL-Cache
-    favorites.py         # FavoritesStore (JSON-Persistenz)
+    main.py              # FastAPI app, endpoints, cache, StaticFiles
+    config.py            # model selection, parameter name mapping, TTL, data paths
+    models.py            # Pydantic models + NormalizedForecast
+    aggregation.py       # mean/std, daily fallback
+    cache.py             # TTL cache
+    favorites.py         # FavoritesStore (JSON persistence)
     sources/
       base.py            # ForecastSource(ABC)
-      open_meteo.py      # Open-Meteo Forecast Client (ein Request pro Modell)
-      geocoding.py       # Open-Meteo Geocoding Client
+      open_meteo.py      # Open-Meteo forecast client (one request per model)
+      geocoding.py       # Open-Meteo geocoding client
     tests/
       test_aggregation.py
       test_parameters.py
@@ -332,28 +332,29 @@ meta-meteo/
       test_local_now.py
   frontend/
     index.html
-    i18n.js              # Übersetzungen, Spracherkennung, Locale/Kardinalrichtungen
+    i18n.js              # translations, language detection, locale/cardinal directions
     app.js
   requirements.txt
   pytest.ini
-  AGENTS.md            # Kurz-Überblick für Agenten (verweist auf diese README)
-  README.md            # Ausführliche Doku (Setup, API, Konfiguration)
+  AGENTS.md            # short overview for agents (references this README)
+  README.md            # detailed docs (setup, API, configuration)
 ```
 
-## Erweiterbarkeit
+## Extensibility
 
-- Jede Datenquelle implementiert `ForecastSource.fetch(lat, lon, days) ->
-  NormalizedForecast`. Die Aggregation arbeitet ausschließlich auf diesem
-  normalisierten Format – weitere Quellen (z. B. Scraping) lassen sich als
-  zusätzliche `Source`-Klassen in die `asyncio.gather`-Liste in `main.py`
-  aufnehmen, ohne die Aggregationslogik zu ändern.
-- Modellauswahl liegt in `backend/config.py`, nicht hart im Code.
-- Bewusst **nicht** in v1: Scraping-Quellen, Multi-Orte-Vergleich, automatisches
-  Neuladen/Scheduler, Server-Deployment (Docker), optionale LLM-Zusammenfassung.
+- Every data source implements `ForecastSource.fetch(lat, lon, days) ->
+  NormalizedForecast`. The aggregation works exclusively on this normalised
+  format – additional sources (e.g. scraping) can be added as extra `Source`
+  classes to the `asyncio.gather` list in `main.py` without changing the
+  aggregation logic.
+- The model selection lives in `backend/config.py`, not hard-coded.
+- Deliberately **not** in v1: scraping sources, multi-location comparison,
+  automatic reload/scheduler, server deployment (Docker), optional LLM summary.
 
-## Manuell getestete Orte
+## Manually tested locations
 
-Berlin (Mitteleuropa), Bremerhaven (Küste) und Innsbruck (Berg) mit den
-Default-Modellen sowie Tokyo (mit `models=jma_seamless,gfs_seamless,ecmwf_ifs025`).
-Alle Parameter liefern plausible Werte; Modellabdeckung (Info-Tooltip und
-eingeklapptes Modell-Panel) wird im Frontend korrekt angezeigt.
+Berlin (Central Europe), Bremerhaven (coast) and Innsbruck (mountain) with the
+default models, as well as Tokyo (with
+`models=jma_seamless,gfs_seamless,ecmwf_ifs025`). All parameters provide
+plausible values; model coverage (info tooltip and collapsed model panel) is
+displayed correctly in the frontend.
