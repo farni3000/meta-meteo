@@ -143,6 +143,11 @@ const modelsList = document.getElementById("models-list");
 const resetZoomBtn = document.getElementById("reset-zoom");
 const refreshBtn = document.getElementById("refresh");
 const favoritesEl = document.getElementById("favorites");
+const smalltalkBtn = document.getElementById("smalltalk");
+const smalltalkModal = document.getElementById("smalltalk-modal");
+const smalltalkText = document.getElementById("smalltalk-text");
+const smalltalkClose = document.getElementById("smalltalk-close");
+const smalltalkAgain = document.getElementById("smalltalk-again");
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -1007,6 +1012,117 @@ function resetZoom() {
   });
 }
 
+function inVisibleRange(timestamp, range) {
+  if (!range) return true;
+  const value = wallClockMs(timestamp);
+  const start = wallClockMs(range[0]);
+  const end = wallClockMs(range[1]);
+  if (!isFinite(value) || !isFinite(start) || !isFinite(end)) return true;
+  return value >= start && value <= end;
+}
+
+function visibleAverage(series, timestamps, range) {
+  const values = [];
+  timestamps.forEach((timestamp, index) => {
+    if (!inVisibleRange(timestamp, range)) return;
+    const value = series.mean[index];
+    if (value === null || value === undefined || !isFinite(value)) return;
+    values.push(value);
+  });
+  if (!values.length) return null;
+  return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function collectSmalltalkMetrics() {
+  if (!state.data) return [];
+  const block = state.data[state.mode];
+  if (!block) return [];
+  const metrics = [];
+  CHARTS.forEach((chart) => {
+    const entry = state.plots[chart.key];
+    const series = block.parameters[chart.key];
+    if (!entry || !series || !series.models_used.length) return;
+    const average = visibleAverage(series, block.timestamps, entry.range);
+    if (average !== null) {
+      metrics.push({
+        label: t("smalltalk.avgLabel", { label: t(chart.labelKey) }),
+        value: formatValue(average, series.unit),
+        kind: "average",
+      });
+    }
+    (chart.overlays || []).forEach((overlay) => {
+      const overlaySeries = block.parameters[overlay.key];
+      if (!overlaySeries || !overlaySeries.models_used.length) return;
+      const overlayAverage = visibleAverage(overlaySeries, block.timestamps, entry.range);
+      if (overlayAverage === null) return;
+      metrics.push({
+        label: t("smalltalk.avgLabel", { label: t(overlay.labelKey) }),
+        value: formatValue(overlayAverage, overlaySeries.unit),
+        kind: "average",
+      });
+    });
+    (entry.points || []).forEach((point) => {
+      metrics.push({
+        label: `${t(chart.labelKey)} (${weekdayName(point.day)})`,
+        value: point.text,
+        kind: "highlight",
+      });
+    });
+  });
+  return metrics;
+}
+
+function openSmalltalkModal() {
+  smalltalkModal.hidden = false;
+}
+
+function closeSmalltalkModal() {
+  smalltalkModal.hidden = true;
+}
+
+async function requestSmalltalk() {
+  if (!state.data || !state.selected || smalltalkBtn.disabled) return;
+  const metrics = collectSmalltalkMetrics();
+  if (!metrics.length) {
+    setStatus(t("status.noData"), true);
+    return;
+  }
+  const location = state.selected;
+  smalltalkText.textContent = t("toolbar.smalltalkLoading");
+  smalltalkText.classList.add("loading");
+  openSmalltalkModal();
+  smalltalkBtn.disabled = true;
+  smalltalkAgain.disabled = true;
+  try {
+    const response = await fetch("/api/smalltalk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        language: I18n.getLang(),
+        location: location.name,
+        admin1: location.admin1 || null,
+        country: location.country || null,
+        mode: state.mode,
+        metrics,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      const detail =
+        typeof payload.detail === "string" ? payload.detail : payload.detail?.message;
+      throw new Error(detail || `HTTP ${response.status}`);
+    }
+    smalltalkText.classList.remove("loading");
+    smalltalkText.textContent = payload.text;
+  } catch (error) {
+    closeSmalltalkModal();
+    setStatus(t("smalltalk.error", { message: error.message }), true);
+  } finally {
+    smalltalkBtn.disabled = false;
+    smalltalkAgain.disabled = false;
+  }
+}
+
 function renderChart(param, block, series) {
   if (series.models_used.length === 0) {
     return null;
@@ -1378,6 +1494,7 @@ function render() {
   renderFavorites();
   resetZoomBtn.hidden = false;
   refreshBtn.hidden = false;
+  smalltalkBtn.hidden = false;
   windowHint.textContent = state.mode === "hourly" ? t("window.hint") : "";
   setStatus("");
 }
@@ -1435,6 +1552,20 @@ async function changeLanguage(lang) {
 languageSelect.addEventListener("change", (event) => changeLanguage(event.target.value));
 
 resetZoomBtn.addEventListener("click", resetZoom);
+
+smalltalkBtn.addEventListener("click", requestSmalltalk);
+
+smalltalkAgain.addEventListener("click", requestSmalltalk);
+
+smalltalkClose.addEventListener("click", closeSmalltalkModal);
+
+smalltalkModal.addEventListener("click", (event) => {
+  if (event.target === smalltalkModal) closeSmalltalkModal();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !smalltalkModal.hidden) closeSmalltalkModal();
+});
 
 refreshBtn.addEventListener("click", refreshForecast);
 

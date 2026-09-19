@@ -88,9 +88,17 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   Above the charts only the "daily only" badge remains; model count and names are
   in the info tooltip behind the chart title, and the count is also in the hover
   tooltip of the values.
+- "Help – I need a smalltalk topic" button next to "Reset zoom": sends the
+  averages of the visible series (temperature incl. feels-like, sunshine, cloud
+  cover, wind, precipitation probability, precipitation, UV index, air pressure)
+  and the daily highlights currently shown, together with the place, to DeepSeek
+  and shows a short, funny opener in a modal. The generated text follows the
+  selected interface language and can be regenerated ("Again"). Requires a
+  `DEEPSEEK_API_KEY` in `.env`; the key never reaches the browser.
 - Short-lived in-memory cache (TTL 10 minutes), key = coordinates + model
   selection.
-- No scheduler, no scraping, no API key, no LLM at runtime.
+- No scheduler, no scraping, no API key for the forecast itself. The forecast
+  pipeline uses no LLM; the optional smalltalk button is the only DeepSeek call.
 
 ## Languages and number formats
 
@@ -250,6 +258,22 @@ value. With exactly one model `std = 0`; with no model `mean`/`std` are `null`.
 `hourly` and `daily` are always both included, the toggle in the frontend works
 without a new request.
 
+### `POST /api/smalltalk`
+
+Generates a short smalltalk opener with DeepSeek from the weather figures the
+frontend currently shows. The request is built entirely in the browser, so the
+server stays stateless here.
+
+| Field | Description |
+| --- | --- |
+| `language` | Interface language for the answer: `de`, `en`, `fr`, `es`, `it` |
+| `location`, `admin1`, `country` | Place metadata for the prompt |
+| `mode` | `hourly` or `daily` (currently displayed view) |
+| `metrics` | List of `{label, value, kind}` – `kind` is `average` or `highlight` |
+
+Response: `{"text": "..."}`. Status `503` if `DEEPSEEK_API_KEY` is not set,
+`502` if DeepSeek is unreachable or returns nothing usable.
+
 ### Favorites endpoints
 
 | Method | Path | Purpose |
@@ -282,6 +306,12 @@ All endpoints return `{"favorites": [...]}`. Storage is in
 
 The model selection is therefore changeable in one place and is overridden per
 request via the query parameter `models`.
+
+The smalltalk feature additionally reads `DEEPSEEK_API_KEY` from the environment
+(or a `.env` file in the project root, loaded via `python-dotenv`); copy
+`.env.example` to `.env` and insert the key. `DEEPSEEK_MODEL` defaults to
+`deepseek-chat` (`backend/config.py`). Without a key the endpoint answers `503`
+and the button shows the corresponding error.
 
 Adding a metric: add a `ParameterSpec` in `backend/config.py` and an entry in the
 `CHARTS` list in `frontend/app.js` (with label, colour, tooltip). Aggregation and
@@ -325,6 +355,7 @@ meta-meteo/
     aggregation.py       # mean/std, daily fallback
     cache.py             # TTL cache
     favorites.py         # FavoritesStore (JSON persistence)
+    smalltalk.py         # DeepSeek prompt + client for the smalltalk button
     sources/
       base.py            # ForecastSource(ABC)
       open_meteo.py      # Open-Meteo forecast client (one request per model)
@@ -340,6 +371,7 @@ meta-meteo/
     app.js
   requirements.txt
   pytest.ini
+  .env.example         # template for DEEPSEEK_API_KEY
   AGENTS.md            # short overview for agents (references this README)
   README.md            # detailed docs (setup, API, configuration)
 ```
@@ -353,7 +385,8 @@ meta-meteo/
   aggregation logic.
 - The model selection lives in `backend/config.py`, not hard-coded.
 - Deliberately **not** in v1: scraping sources, multi-location comparison,
-  automatic reload/scheduler, server deployment (Docker), optional LLM summary.
+  automatic reload/scheduler, server deployment (Docker). The smalltalk opener
+  is the only LLM use; a general LLM summary of the forecast is not planned.
 
 ## Manually tested locations
 

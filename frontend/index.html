@@ -326,6 +326,52 @@
     #models-summary a { color: var(--accent); text-decoration: none; }
     #models-summary a:hover { text-decoration: underline; }
     .docs-note { margin: 0 0 10px; color: var(--muted); font-size: 0.72rem; }
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.72);
+    }
+    .modal[hidden] { display: none; }
+    .modal-card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px 20px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .modal-title { font-size: 1.05rem; font-weight: 700; }
+    .modal-close {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1.4rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 2px;
+    }
+    .modal-close:hover { color: var(--accent); }
+    .modal-text {
+      margin: 0 0 16px;
+      font-size: 1.05rem;
+      line-height: 1.5;
+      min-height: 2.4em;
+    }
+    .modal-text.loading { color: var(--muted); }
+    .modal-actions { display: flex; justify-content: flex-end; }
     @media (min-width: 900px) {
       .charts { grid-template-columns: 1fr 1fr; }
       .charts .chart-card.wide { grid-column: 1 / -1; }
@@ -383,6 +429,7 @@
       <span id="window-hint"></span>
       <button id="refresh" class="btn" data-i18n="toolbar.refresh" data-i18n-title="toolbar.refreshTitle" hidden>Aktualisieren</button>
       <button id="reset-zoom" class="btn" data-i18n="toolbar.resetZoom" hidden>Zoom für alle zurücksetzen</button>
+      <button id="smalltalk" class="btn" data-i18n="toolbar.smalltalk" data-i18n-title="toolbar.smalltalkTitle" hidden>Hilfe – Ich brauch ein Smalltalk Thema</button>
       <span id="status"></span>
     </div>
     <div id="location-meta"></div>
@@ -396,6 +443,18 @@
       <div id="models-list"></div>
     </details>
   </main>
+  <div id="smalltalk-modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="smalltalk-modal-title">
+      <div class="modal-head">
+        <span id="smalltalk-modal-title" class="modal-title" data-i18n="smalltalk.title">Smalltalk-Thema</span>
+        <button id="smalltalk-close" class="modal-close" type="button" data-i18n-title="smalltalk.close">×</button>
+      </div>
+      <p id="smalltalk-text" class="modal-text"></p>
+      <div class="modal-actions">
+        <button id="smalltalk-again" class="btn" type="button" data-i18n="smalltalk.again">Nochmal</button>
+      </div>
+    </div>
+  </div>
   <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>

@@ -34,7 +34,10 @@ from .models import (
     GeocodeResponse,
     LocationInfo,
     NormalizedForecast,
+    SmalltalkRequest,
+    SmalltalkResponse,
 )
+from .smalltalk import generate_smalltalk
 from .sources.geocoding import GeocodingClient
 from .sources.open_meteo import OpenMeteoForecastSource
 
@@ -165,6 +168,33 @@ async def forecast(
     )
     _cache.set(cache_key, response)
     return response
+
+
+@app.post("/api/smalltalk", response_model=SmalltalkResponse)
+async def smalltalk(payload: SmalltalkRequest) -> SmalltalkResponse:
+    if not settings.deepseek_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="DEEPSEEK_API_KEY ist nicht gesetzt",
+        )
+    if not payload.metrics:
+        raise HTTPException(status_code=422, detail="Keine Wetterdaten übermittelt")
+    client: httpx.AsyncClient = app.state.client
+    try:
+        text = await generate_smalltalk(
+            client,
+            payload,
+            api_key=settings.deepseek_api_key,
+            model=settings.deepseek_model,
+        )
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"DeepSeek nicht erreichbar: {exc}",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return SmalltalkResponse(text=text)
 
 
 @app.get("/api/favorites", response_model=FavoritesResponse)

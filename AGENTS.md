@@ -9,18 +9,21 @@ questions.
 **MetaMeteo** – local web app (FastAPI backend + static browser frontend) that
 fetches a 7-day forecast for a location from several Open-Meteo weather models,
 aggregates mean + spread per parameter and renders it as charts with Plotly. No
-API key, no scheduler, no LLM at runtime.
+API key for the forecast, no scheduler. The only LLM call is the optional
+smalltalk button (`POST /api/smalltalk`, DeepSeek, `DEEPSEEK_API_KEY` from
+`.env`); the forecast pipeline itself is fully deterministic.
 
 ## Structure
 
 ```
 backend/
-  main.py          # FastAPI app: /api/geocode, /api/forecast, /api/favorites, cache, StaticFiles
-  config.py        # PARAMETER_SPECS, model lists, TTL, DISPLAY_NAMES
+  main.py          # FastAPI app: /api/geocode, /api/forecast, /api/smalltalk, /api/favorites, cache, StaticFiles
+  config.py        # PARAMETER_SPECS, model lists, TTL, DISPLAY_NAMES, .env loading, DeepSeek settings
   models.py        # Pydantic response models + NormalizedForecast
   aggregation.py   # mean/std, circular aggregation, daily fallback
   cache.py         # in-memory TTL cache
   favorites.py     # JSON persistence (data/favorites.json)
+  smalltalk.py     # DeepSeek prompt + client for the smalltalk button
   sources/
     open_meteo.py  # Open-Meteo client, one request per model
     geocoding.py   # Open-Meteo geocoding
@@ -74,6 +77,13 @@ card per entry in `CHARTS` (`frontend/app.js`); `STD` is drawn as an error band.
   cache hits (no model-run timestamp). The frontend shows it as
   "Data fetched: …" with an explanatory tooltip
   (`location.updated`/`location.updatedTitle`).
+- **Smalltalk button:** `#smalltalk` next to `#reset-zoom` collects
+  `collectSmalltalkMetrics()` from the visible `state.plots` (per chart the mean
+  over the visible range plus the stored `points` = daily highlights) and posts
+  them with place and `I18n.getLang()` to `/api/smalltalk`. The backend
+  (`smalltalk.py`) calls DeepSeek with `DEEPSEEK_API_KEY` and returns a short,
+  funny opener that is shown in the `#smalltalk-modal`; "Again" regenerates. The
+  API key stays server-side. Missing key → `503`, upstream failure → `502`.
 - **Internationalisation:** no UI strings directly in the code – new texts as a
   key in all five languages in `frontend/i18n.js` (`TRANSLATIONS`), retrieved via
   `t()` (interpolation with `{{var}}`). `CHARTS` uses `labelKey`/`infoKey`

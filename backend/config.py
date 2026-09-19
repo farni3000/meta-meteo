@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(PROJECT_ROOT / ".env")
+
+DATA_DIR = PROJECT_ROOT / "data"
 FAVORITES_PATH = DATA_DIR / "favorites.json"
 
 
@@ -93,12 +99,20 @@ DEFAULT_FORECAST_DAYS = 7
 CACHE_TTL_SECONDS = 600
 HTTP_TIMEOUT_SECONDS = 20.0
 
+DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
+DEEPSEEK_MODEL = "deepseek-chat"
+DEEPSEEK_TIMEOUT_SECONDS = 45.0
+
 
 @dataclass(frozen=True)
 class Settings:
     default_models: list[str] = field(default_factory=lambda: list(DEFAULT_MODELS))
     allowed_models: list[str] = field(default_factory=lambda: list(ALLOWED_MODELS))
     cache_ttl_seconds: float = CACHE_TTL_SECONDS
+    deepseek_api_key: Optional[str] = field(
+        default_factory=lambda: os.getenv("DEEPSEEK_API_KEY")
+    )
+    deepseek_model: str = DEEPSEEK_MODEL
 
 
 settings = Settings()

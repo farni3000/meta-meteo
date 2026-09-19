@@ -86,3 +86,22 @@ class FavoritesResponse(BaseModel):
 
 class FavoriteOrder(BaseModel):
     ids: list[str]
+
+
+class SmalltalkMetric(BaseModel):
+    label: str
+    value: str
+    kind: str = "average"
+
+
+class SmalltalkRequest(BaseModel):
+    language: str = "en"
+    location: str
+    country: Optional[str] = None
+    admin1: Optional[str] = None
+    mode: str = "hourly"
+    metrics: list[SmalltalkMetric]
+
+
+class SmalltalkResponse(BaseModel):
+    text: str
