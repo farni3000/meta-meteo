@@ -112,9 +112,9 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   rendered as a severity-coloured banner (CAP levels minor/moderate/severe/
   extreme → yellow/orange/red/violet) with an expandable description and
   instruction. The source depends on the country of the location: DWD/Bright Sky
-  for Germany (point-accurate, German/English text), NWS (`api.weather.gov`) for
-  the US, and the country feeds of MeteoAlarm for the rest of Europe. Without an
-  active warning the banner stays hidden. A failed warning request never fails
+  for Germany (point-accurate, German/English text) and NWS (`api.weather.gov`)
+  for the US. Other countries have no warning source and show no banner. Without
+  an active warning the banner stays hidden. A failed warning request never fails
   the forecast; it simply yields no alerts.
 - Short-lived in-memory cache (TTL 10 minutes), key = coordinates + model
   selection + country code + UI language.
@@ -320,16 +320,14 @@ accumulation window. All three are only used by the sunshine-hours chart.
 `alerts` holds the active official weather warnings for the location, sorted by
 severity (highest first) and then by onset. The `source` decides the provider:
 `brightsky` (DWD, only `country_code=DE`, point-accurate, text chosen from the
-`_de`/`_en` variants according to `lang`), `nws` (US, `country_code=US`,
-point-accurate, English) or `meteoalarm` (other European country codes, country
-feed, English/local short texts). `severity` is the CAP level
+`_de`/`_en` variants according to `lang`) or `nws` (US, `country_code=US`,
+point-accurate, English). For every other country the list stays empty – there
+is no worldwide warning source. `severity` is the CAP level
 (`minor`/`moderate`/`severe`/`extreme`) with `severity_level` 1–4 for colouring.
-Warnings are fetched in parallel with the models; a failure or an unknown country
-simply yields `[]` and never fails the whole forecast. Because the alerts are
-part of the cached forecast, the cache key includes `country_code` and `lang`.
-Note that the MeteoAlarm feeds are **country-wide**, not point-accurate – a
-warning can appear that does not apply to the exact coordinates (Germany and the
-US use point-accurate sources instead).
+Warnings are fetched in parallel with the models; a failure or an unsupported
+country simply yields `[]` and never fails the whole forecast. Because the
+alerts are part of the cached forecast, the cache key includes `country_code`
+and `lang`.
 
 ### `POST /api/smalltalk`
 
@@ -381,8 +379,8 @@ The model selection is therefore changeable in one place and is overridden per
 request via the query parameter `models`.
 
 The smalltalk feature additionally reads `DEEPSEEK_API_KEY` from the environment
-(or a `.env` file in the project root, loaded via `python-dotenv`); copy
-`.env.example` to `.env` and insert the key. `DEEPSEEK_MODEL` defaults to
+(or a `.env` file in the project root, loaded via `python-dotenv`); create a
+`.env` with `DEEPSEEK_API_KEY=<your key>`. `DEEPSEEK_MODEL` defaults to
 `deepseek-chat` (`backend/config.py`). Without a key the endpoint answers `503`
 and the button shows the corresponding error.
 
@@ -429,7 +427,7 @@ meta-meteo/
     cache.py             # TTL cache
     favorites.py         # FavoritesStore (JSON persistence)
     sun.py               # sunrise/sunset fetch + max-sunshine ceiling
-    alerts.py            # weather warnings (Bright Sky / NWS / MeteoAlarm)
+    alerts.py            # weather warnings (Bright Sky / NWS)
     smalltalk.py         # DeepSeek prompt + client for the smalltalk button
     sources/
       base.py            # ForecastSource(ABC)
@@ -448,7 +446,6 @@ meta-meteo/
     app.js
   requirements.txt
   pytest.ini
-  .env.example         # template for DEEPSEEK_API_KEY
   AGENTS.md            # short overview for agents (references this README)
   README.md            # detailed docs (setup, API, configuration)
 ```

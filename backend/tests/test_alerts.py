@@ -7,9 +7,9 @@ from backend.alerts import (
     _severity,
     fetch_alerts,
     parse_brightsky,
-    parse_meteoalarm,
     parse_nws,
 )
+from backend.models import WeatherAlert
 
 BRIGHTSKY_DATA = {
     "alerts": [
@@ -60,41 +60,6 @@ NWS_DATA = {
     ]
 }
 
-METEOALARM_XML = """<?xml version="1.0" encoding="UTF-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom" xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2">
-  <entry>
-    <title>Orange Wind Warning issued for Germany - Kreis A</title>
-    <link href="https://meteoalarm.org/DE158"/>
-    <cap:identifier>ma-1</cap:identifier>
-    <cap:event>gale-force gusts</cap:event>
-    <cap:severity>Moderate</cap:severity>
-    <cap:onset>2026-09-20T07:00:00+00:00</cap:onset>
-    <cap:expires>2026-09-20T18:00:00+00:00</cap:expires>
-    <cap:areaDesc>Kreis A</cap:areaDesc>
-  </entry>
-  <entry>
-    <title>Orange Wind Warning issued for Germany - Kreis B</title>
-    <link href="https://meteoalarm.org/DE159"/>
-    <cap:identifier>ma-2</cap:identifier>
-    <cap:event>gale-force gusts</cap:event>
-    <cap:severity>Moderate</cap:severity>
-    <cap:onset>2026-09-20T07:00:00+00:00</cap:onset>
-    <cap:expires>2026-09-20T18:00:00+00:00</cap:expires>
-    <cap:areaDesc>Kreis B</cap:areaDesc>
-  </entry>
-  <entry>
-    <title>Red Thunderstorm Warning issued for Germany - Kreis C</title>
-    <link href="https://meteoalarm.org/DE160"/>
-    <cap:identifier>ma-3</cap:identifier>
-    <cap:event>thunderstorms</cap:event>
-    <cap:severity>Severe</cap:severity>
-    <cap:onset>2026-09-20T12:00:00+00:00</cap:onset>
-    <cap:expires>2026-09-20T20:00:00+00:00</cap:expires>
-    <cap:areaDesc>Kreis C</cap:areaDesc>
-  </entry>
-</feed>
-"""
-
 
 def test_severity_mapping() -> None:
     assert _severity("Moderate") == ("moderate", 2)
@@ -129,17 +94,34 @@ def test_parse_nws() -> None:
     assert alert.url == "urn:nws:1"
 
 
-def test_parse_meteoalarm_dedupes_and_sorts() -> None:
-    alerts = _finalize(parse_meteoalarm(METEOALARM_XML))
-    # The two identical moderate gusts collapse into one, severe stays first.
+def _alert(event: str, level: int, onset: str) -> WeatherAlert:
+    return WeatherAlert(
+        id=f"{event}-{level}",
+        source="nws",
+        severity=["minor", "moderate", "severe", "extreme"][level - 1],
+        severity_level=level,
+        event=event,
+        onset=onset,
+        expires="2026-09-20T18:00:00+00:00",
+    )
+
+
+def test_finalize_dedupes_and_sorts() -> None:
+    alerts = _finalize(
+        [
+            _alert("gale force gusts", 2, "2026-09-20T07:00:00+00:00"),
+            _alert("gale force gusts", 2, "2026-09-20T07:00:00+00:00"),
+            _alert("thunderstorms", 3, "2026-09-20T12:00:00+00:00"),
+        ]
+    )
+    # The two identical gusts collapse into one, severe stays first.
     assert len(alerts) == 2
     assert alerts[0].severity_level == 3
     assert alerts[0].event == "thunderstorms"
     assert alerts[1].severity_level == 2
-    assert alerts[1].source == "meteoalarm"
-    assert alerts[1].area == "Kreis A"
 
 
 def test_fetch_alerts_unknown_country_returns_empty() -> None:
     assert asyncio.run(fetch_alerts(None, 0.0, 0.0, "XX")) == []
+    assert asyncio.run(fetch_alerts(None, 0.0, 0.0, "FR")) == []
     assert asyncio.run(fetch_alerts(None, 0.0, 0.0, None)) == []

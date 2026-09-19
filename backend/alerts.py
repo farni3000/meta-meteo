@@ -1,27 +1,21 @@
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
 from typing import Any, Optional
 
 import httpx
 
 from .config import (
     BRIGHTSKY_ALERTS_URL,
-    METEOALARM_COUNTRY_SLUGS,
-    METEOALARM_FEED_URL,
     NWS_ALERTS_URL,
     NWS_USER_AGENT,
 )
 from .models import WeatherAlert
 
-# CAP awareness levels used by Bright Sky, NWS and MeteoAlarm alike.
+# CAP awareness levels used by Bright Sky and NWS alike.
 _LEVEL_NAMES: dict[int, str] = {1: "minor", 2: "moderate", 3: "severe", 4: "extreme"}
 _SEVERITY_LEVELS: dict[str, int] = {
     name: level for level, name in _LEVEL_NAMES.items()
 }
-
-_ATOM_NS = "http://www.w3.org/2005/Atom"
-_CAP_NS = "urn:oasis:names:tc:emergency:cap:1.2"
 
 
 def _severity(value: Any) -> tuple[str, int]:
@@ -85,34 +79,6 @@ def parse_nws(data: dict[str, Any]) -> list[WeatherAlert]:
     return alerts
 
 
-def parse_meteoalarm(xml_text: str) -> list[WeatherAlert]:
-    root = ET.fromstring(xml_text)
-    alerts: list[WeatherAlert] = []
-    for entry in root.findall(f"{{{_ATOM_NS}}}entry"):
-        def cap(tag: str) -> Optional[str]:
-            element = entry.find(f"{{{_CAP_NS}}}{tag}")
-            return element.text.strip() if element is not None and element.text else None
-
-        title = entry.find(f"{{{_ATOM_NS}}}title")
-        link = entry.find(f"{{{_ATOM_NS}}}link")
-        severity, level = _severity(cap("severity"))
-        alerts.append(
-            WeatherAlert(
-                id=cap("identifier") or entry.findtext(f"{{{_ATOM_NS}}}id") or "",
-                source="meteoalarm",
-                severity=severity,
-                severity_level=level,
-                event=cap("event"),
-                headline=title.text.strip() if title is not None and title.text else None,
-                onset=cap("onset"),
-                expires=cap("expires"),
-                area=cap("areaDesc"),
-                url=link.get("href") if link is not None else None,
-            )
-        )
-    return alerts
-
-
 def _finalize(alerts: list[WeatherAlert]) -> list[WeatherAlert]:
     seen: set[tuple[Any, ...]] = set()
     unique: list[WeatherAlert] = []
@@ -145,14 +111,6 @@ async def _fetch_nws(
     return _finalize(parse_nws(response.json()))
 
 
-async def _fetch_meteoalarm(
-    client: httpx.AsyncClient, slug: str
-) -> list[WeatherAlert]:
-    response = await client.get(METEOALARM_FEED_URL.format(slug=slug))
-    response.raise_for_status()
-    return _finalize(parse_meteoalarm(response.text))
-
-
 async def fetch_alerts(
     client: httpx.AsyncClient,
     lat: float,
@@ -165,7 +123,4 @@ async def fetch_alerts(
         return await _fetch_brightsky(client, lat, lon, lang)
     if code == "US":
         return await _fetch_nws(client, lat, lon)
-    slug = METEOALARM_COUNTRY_SLUGS.get(code)
-    if slug:
-        return await _fetch_meteoalarm(client, slug)
     return []

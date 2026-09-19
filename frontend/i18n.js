@@ -134,7 +134,6 @@ const I18n = (() => {
       "alerts.details": "Zur Warnung",
       "alerts.source.brightsky": "Quelle: DWD (Bright Sky)",
       "alerts.source.nws": "Quelle: NWS",
-      "alerts.source.meteoalarm": "Quelle: MeteoAlarm",
     },
     en: {
       "brand.tagline": "Many opinions, one mean: weather forecasting for data nerds.",
@@ -226,7 +225,6 @@ const I18n = (() => {
       "alerts.details": "View warning",
       "alerts.source.brightsky": "Source: DWD (Bright Sky)",
       "alerts.source.nws": "Source: NWS",
-      "alerts.source.meteoalarm": "Source: MeteoAlarm",
     },
     fr: {
       "brand.tagline": "Beaucoup d'avis, une moyenne : prévisions météo pour les fans de données.",
@@ -318,7 +316,6 @@ const I18n = (() => {
       "alerts.details": "Voir l'alerte",
       "alerts.source.brightsky": "Source : DWD (Bright Sky)",
       "alerts.source.nws": "Source : NWS",
-      "alerts.source.meteoalarm": "Source : MeteoAlarm",
     },
     es: {
       "brand.tagline": "Muchas opiniones, una media: previsión meteorológica para fans de los datos.",
@@ -410,7 +407,6 @@ const I18n = (() => {
       "alerts.details": "Ver aviso",
       "alerts.source.brightsky": "Fuente: DWD (Bright Sky)",
       "alerts.source.nws": "Fuente: NWS",
-      "alerts.source.meteoalarm": "Fuente: MeteoAlarm",
     },
     it: {
       "brand.tagline": "Molte opinioni, una media: previsioni meteo per appassionati di dati.",
@@ -502,7 +498,6 @@ const I18n = (() => {
       "alerts.details": "Vedi avviso",
       "alerts.source.brightsky": "Fonte: DWD (Bright Sky)",
       "alerts.source.nws": "Fonte: NWS",
-      "alerts.source.meteoalarm": "Fonte: MeteoAlarm",
     },
   };
 
