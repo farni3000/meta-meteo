@@ -103,11 +103,14 @@ as an error band.
   (`location.updated`/`location.updatedTitle`).
 - **Smalltalk button:** `#smalltalk` next to `#reset-zoom` collects
   `collectSmalltalkMetrics()` from the visible `state.plots` (per chart the mean
-  over the visible range plus the stored `points` = daily highlights) and posts
-  them with place and `I18n.getLang()` to `/api/smalltalk`. The backend
-  (`smalltalk.py`) calls DeepSeek with `DEEPSEEK_API_KEY` and returns a short,
-  funny opener that is shown in the `#smalltalk-modal`; "Again" regenerates. The
-  API key stays server-side. Missing key → `503`, upstream failure → `502`.
+  over the visible range plus the stored `points` = daily highlights) and
+  `collectSmalltalkAlerts()` (the five most severe `state.data.alerts`, with
+  localised severity label) and posts them with place and `I18n.getLang()` to
+  `/api/smalltalk`. The backend (`smalltalk.py`) calls DeepSeek with
+  `DEEPSEEK_API_KEY` and returns a short, funny opener that is shown in the
+  `#smalltalk-modal`; warnings in the payload are treated as the strongest hook.
+  "Again" regenerates. The API key stays server-side. Missing key → `503`,
+  upstream failure → `502`.
 - **Internationalisation:** no UI strings directly in the code – new texts as a
   key in all five languages in `frontend/i18n.js` (`TRANSLATIONS`), retrieved via
   `t()` (interpolation with `{{var}}`). `CHARTS` uses `labelKey`/`infoKey`

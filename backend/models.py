@@ -126,6 +126,15 @@ class SmalltalkMetric(BaseModel):
     kind: str = "average"
 
 
+class SmalltalkAlert(BaseModel):
+    severity: str
+    event: Optional[str] = None
+    headline: Optional[str] = None
+    area: Optional[str] = None
+    onset: Optional[str] = None
+    expires: Optional[str] = None
+
+
 class SmalltalkRequest(BaseModel):
     language: str = "en"
     location: str
@@ -133,6 +142,7 @@ class SmalltalkRequest(BaseModel):
     admin1: Optional[str] = None
     mode: str = "hourly"
     metrics: list[SmalltalkMetric]
+    alerts: list[SmalltalkAlert] = []
 
 
 class SmalltalkResponse(BaseModel):

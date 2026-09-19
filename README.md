@@ -103,11 +103,14 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   tooltip of the values.
 - "Help – I need a smalltalk topic" button next to "Reset zoom": sends the
   averages of the visible series (temperature incl. feels-like, sunshine, cloud
-  cover, wind, precipitation probability, precipitation, UV index, air pressure)
-  and the daily highlights currently shown, together with the place, to DeepSeek
-  and shows a short, funny opener in a modal. The generated text follows the
-  selected interface language and can be regenerated ("Again"). Requires a
-  `DEEPSEEK_API_KEY` in `.env`; the key never reaches the browser.
+  cover, wind, precipitation probability, precipitation, UV index, air pressure),
+  the daily highlights currently shown and any active weather warnings (the five
+  most severe, with level, event, area and validity), together with the place, to
+  DeepSeek and shows a short, funny opener in a modal. The warnings are treated as
+  the strongest hook and woven into the joke without sounding alarming. The
+  generated text follows the selected interface language and can be regenerated
+  ("Again"). Requires a `DEEPSEEK_API_KEY` in `.env`; the key never reaches the
+  browser.
 - Weather warnings above the charts: fetched in parallel with the forecast and
   rendered as a severity-coloured banner (CAP levels minor/moderate/severe/
   extreme → yellow/orange/red/violet) with an expandable description and
@@ -341,6 +344,7 @@ server stays stateless here.
 | `location`, `admin1`, `country` | Place metadata for the prompt |
 | `mode` | `hourly` or `daily` (currently displayed view) |
 | `metrics` | List of `{label, value, kind}` – `kind` is `average` or `highlight` |
+| `alerts` | Optional list of active warnings `{severity, event, headline, area, onset, expires}` (localised `severity` label); folded into the prompt as the strongest hook |
 
 Response: `{"text": "..."}`. Status `503` if `DEEPSEEK_API_KEY` is not set,
 `502` if DeepSeek is unreachable or returns nothing usable.

@@ -1134,6 +1134,20 @@ function collectSmalltalkMetrics() {
   return metrics;
 }
 
+const SMALLTALK_ALERT_LIMIT = 5;
+
+function collectSmalltalkAlerts() {
+  const alerts = (state.data && state.data.alerts) || [];
+  return alerts.slice(0, SMALLTALK_ALERT_LIMIT).map((alert) => ({
+    severity: t(`alerts.${alert.severity}`),
+    event: alert.event || null,
+    headline: alert.headline || null,
+    area: alert.area || null,
+    onset: alert.onset || null,
+    expires: alert.expires || null,
+  }));
+}
+
 function openSmalltalkModal() {
   smalltalkModal.hidden = false;
 }
@@ -1166,6 +1180,7 @@ async function requestSmalltalk() {
         country: location.country || null,
         mode: state.mode,
         metrics,
+        alerts: collectSmalltalkAlerts(),
       }),
     });
     const payload = await response.json();

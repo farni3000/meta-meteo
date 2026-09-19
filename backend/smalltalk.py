@@ -18,12 +18,15 @@ LANGUAGE_NAMES: dict[str, str] = {
 SYSTEM_PROMPT = (
     "You are a witty, humorous weather small-talk generator. "
     "You are given a place and a handful of weather figures (averages and daily "
-    "highlights) for the coming days. Write ONE short, funny, casual opener of at "
-    "most 25 words in {language} that someone could use to start a light "
-    "conversation. Mention the place naturally and lean into whatever stands out "
-    "most (heat, rain, wind, sunshine, cold, gloom). Be playful and a little "
-    "exaggerated, but keep it plausible. No greeting formulas, no emoji, no "
-    "markdown, no quotes. Return only the sentence."
+    "highlights) for the coming days, plus any active official weather warnings. "
+    "Write ONE short, funny, casual opener of at most 25 words in {language} that "
+    "someone could use to start a light conversation. Mention the place naturally "
+    "and lean into whatever stands out most (heat, rain, wind, sunshine, cold, "
+    "gloom). If one or more weather warnings are given, treat the most severe one "
+    "as the strongest hook and fold it into the joke in a light, playful way "
+    "without sounding alarming. Be playful and a little exaggerated, but keep it "
+    "plausible. No greeting formulas, no emoji, no markdown, no quotes. Return "
+    "only the sentence."
 )
 
 
@@ -32,7 +35,7 @@ def build_messages(request: SmalltalkRequest) -> list[dict[str, str]]:
     place = ", ".join(
         part for part in [request.location, request.admin1, request.country] if part
     )
-    data = {
+    data: dict[str, object] = {
         "place": place,
         "view": request.mode,
         "metrics": [
@@ -40,6 +43,23 @@ def build_messages(request: SmalltalkRequest) -> list[dict[str, str]]:
             for metric in request.metrics
         ],
     }
+    warnings = [
+        {
+            key: value
+            for key, value in {
+                "severity": alert.severity,
+                "event": alert.event,
+                "headline": alert.headline,
+                "area": alert.area,
+                "onset": alert.onset,
+                "expires": alert.expires,
+            }.items()
+            if value
+        }
+        for alert in request.alerts
+    ]
+    if warnings:
+        data["warnings"] = warnings
     return [
         {"role": "system", "content": SYSTEM_PROMPT.format(language=language)},
         {

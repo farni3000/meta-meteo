@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from fastapi.testclient import TestClient
 
 from backend import main
-from backend.models import SmalltalkMetric, SmalltalkRequest
+from backend.models import SmalltalkAlert, SmalltalkMetric, SmalltalkRequest
 from backend.smalltalk import build_messages
 
 
@@ -23,6 +23,16 @@ def make_request() -> SmalltalkRequest:
                 label="Temperatur (2 m) (Sa)", value="27,8 °C", kind="highlight"
             ),
         ],
+        alerts=[
+            SmalltalkAlert(
+                severity="Markant",
+                event="STURMBÖEN",
+                headline="Amtliche WARNUNG vor STURMBÖEN",
+                area="Kreis Steinburg",
+                onset="2026-09-20T10:00:00+00:00",
+                expires="2026-09-20T18:00:00+00:00",
+            )
+        ],
     )
 
 
@@ -38,6 +48,16 @@ def test_build_messages_uses_target_language_and_data() -> None:
     assert "27,8 °C" in user
     assert "average" in user
     assert "highlight" in user
+    assert "warnings" in user
+    assert "STURMBÖEN" in user
+    assert "Kreis Steinburg" in user
+
+
+def test_build_messages_omits_warnings_when_none() -> None:
+    request = make_request()
+    request.alerts = []
+    user = build_messages(request)[1]["content"]
+    assert "warnings" not in user
 
 
 def test_build_messages_unknown_language_falls_back_to_english() -> None:
