@@ -54,7 +54,7 @@ const CHARTS = [
     key: "uv_index",
     labelKey: "chart.uv.label",
     infoKey: "chart.uv.info",
-    color: "#facc15",
+    color: "#ec4899",
     zero: true,
     annotations: { type: "max", dynamicArrow: true },
   },
