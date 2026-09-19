@@ -1379,7 +1379,7 @@ function render() {
   resetZoomBtn.hidden = false;
   refreshBtn.hidden = false;
   windowHint.textContent = state.mode === "hourly" ? t("window.hint") : "";
-  setStatus(t("status.ready"));
+  setStatus("");
 }
 
 const plotlyLocalePromises = {};
