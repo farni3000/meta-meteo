@@ -66,12 +66,16 @@ on failure). The frontend renders a chart card per entry in `CHARTS`
   lines and right-aligned labels; the y-axis scales dynamically to the data
   range. Example: the pressure bands in the air-pressure chart.
 - **Max-sunshine ceiling:** the sunshine chart (`sunCeiling: true` in `CHARTS`)
-  draws `state.data.sun[state.mode]` as a thin grey solid line (width 1.2,
-  `SUN_CEILING_COLOR`) behind the mean line; `computeYRange` includes its max so
-  it is never clipped. The cloud-cover overlay is blue (`#60a5fa`) and dashed.
-  The hourly ceiling covers the hour ending at the timestamp (`[t − 1 h, t)`),
-  matching Open-Meteo's accumulation window. Data comes from `sun.py` (separate
-  Open-Meteo call, see README).
+  draws `state.data.sun.ceiling` (fine-sampled, own `timestamps`) as a thin grey
+  solid line (width 1.2, `SUN_CEILING_COLOR`) behind the mean line; `sun.daily`
+  is used in the daily view. The fine sampling plus explicit sunrise/sunset ramp
+  corners keeps both shoulders exactly one hour wide. `computeYRange` includes
+  the ceiling max so it is never clipped. The ±1σ band is clamped to the
+  astronomical maximum (`sun.hourly` per hour, `sun.daily` in the daily view) and
+  to 0 via the optional cap in `buildTraces`/`seriesExtent`. The cloud-cover
+  overlay is blue (`#60a5fa`) and dashed. The hourly value covers the hour ending
+  at the timestamp (`[t − 1 h, t)`), matching Open-Meteo's accumulation window.
+  Data comes from `sun.py` (separate Open-Meteo call, see README).
 - **Data start from now:** `ForecastResponse.now` (local time, `YYYY-MM-DDTHH:mm`)
   is set fresh per request. The frontend sets `xaxis.minallowed` to this value
   (hourly) or to 00:00 today (daily) so that past data stays invisible even via

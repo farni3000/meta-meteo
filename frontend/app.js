@@ -489,14 +489,21 @@ function bandColor(hex) {
   return hexToRgba(hex, 0.18);
 }
 
-function seriesExtent(series) {
+function seriesExtent(series, cap) {
   let min = Infinity;
   let max = -Infinity;
   series.mean.forEach((value, index) => {
     if (value === null || value === undefined) return;
     const spread = (series.std && series.std[index]) || 0;
-    min = Math.min(min, value - spread);
-    max = Math.max(max, value + spread);
+    let lower = value - spread;
+    let upper = value + spread;
+    if (cap) {
+      const limit = cap[index];
+      upper = limit !== null && limit !== undefined ? Math.min(upper, limit) : upper;
+      lower = limit !== null && limit !== undefined ? clamp(lower, 0, limit) : Math.max(lower, 0);
+    }
+    min = Math.min(min, lower);
+    max = Math.max(max, upper);
   });
   return isFinite(min) && isFinite(max) ? [min, max] : null;
 }
@@ -687,8 +694,15 @@ function dailyHighlights(param, context) {
   return highlights;
 }
 
-function computeYRange(param, series, points, topFactor = 0.22, extraMax = null) {
-  const extent = seriesExtent(series) || [0, 0];
+function computeYRange(
+  param,
+  series,
+  points,
+  topFactor = 0.22,
+  extraMax = null,
+  cap = null
+) {
+  const extent = seriesExtent(series, cap) || [0, 0];
   let min = extent[0];
   let max = extent[1];
   if (extraMax !== null && extraMax !== undefined) max = Math.max(max, extraMax);
@@ -786,13 +800,21 @@ function rebuildAnnotations(entry, range) {
   return annotations;
 }
 
-function buildTraces(x, series, color) {
-  const lower = series.mean.map((value, index) =>
-    value === null || series.std[index] === null ? null : value - series.std[index]
-  );
-  const upper = series.mean.map((value, index) =>
-    value === null || series.std[index] === null ? null : value + series.std[index]
-  );
+function buildTraces(x, series, color, cap = null) {
+  const capAt = (index) =>
+    cap && cap[index] !== null && cap[index] !== undefined ? cap[index] : null;
+  const lower = series.mean.map((value, index) => {
+    if (value === null || series.std[index] === null) return null;
+    const raw = value - series.std[index];
+    const bound = capAt(index);
+    return bound === null ? raw : clamp(raw, 0, bound);
+  });
+  const upper = series.mean.map((value, index) => {
+    if (value === null || series.std[index] === null) return null;
+    const raw = value + series.std[index];
+    const bound = capAt(index);
+    return bound === null ? raw : clamp(raw, 0, bound);
+  });
   const unit = series.unit || "";
   const counts = series.model_count || [];
   const customdata = series.mean.map((value, index) => [
@@ -857,11 +879,19 @@ function overlayTrace(x, series, overlay) {
 
 const SUN_CEILING_COLOR = "#9ca3af";
 
-function sunSeries(mode) {
+function sunLineSeries(mode) {
   const sun = state.data && state.data.sun;
-  if (!sun || !sun[mode] || !sun[mode].mean) return null;
-  if (!sun[mode].mean.some((value) => value !== null && value !== undefined)) return null;
-  return sun[mode];
+  const series = sun && (mode === "hourly" ? sun.ceiling : sun.daily);
+  if (!series || !series.mean) return null;
+  if (!series.mean.some((value) => value !== null && value !== undefined)) return null;
+  return series;
+}
+
+function sunCapSeries(mode) {
+  const sun = state.data && state.data.sun;
+  const series = sun && (mode === "hourly" ? sun.hourly : sun.daily);
+  if (!series || !series.mean) return null;
+  return series;
 }
 
 function ceilingTrace(x, series, label) {
@@ -1213,10 +1243,17 @@ function renderChart(param, block, series) {
     xRange = [start, end];
   }
 
-  const traces = buildTraces(timestamps, series, param.color);
-  const ceiling = param.sunCeiling ? sunSeries(state.mode) : null;
+  const capSeries = param.sunCeiling ? sunCapSeries(state.mode) : null;
+  const traces = buildTraces(
+    timestamps,
+    series,
+    param.color,
+    capSeries ? capSeries.mean : null
+  );
+  const ceiling = param.sunCeiling ? sunLineSeries(state.mode) : null;
   if (ceiling) {
-    traces.splice(2, 0, ceilingTrace(timestamps, ceiling, t("chart.sunshine.max")));
+    const ceilingX = ceiling.timestamps || timestamps;
+    traces.splice(2, 0, ceilingTrace(ceilingX, ceiling, t("chart.sunshine.max")));
   }
   let secondaryUnit = null;
   (param.overlays || []).forEach((overlay) => {
@@ -1250,7 +1287,14 @@ function renderChart(param, block, series) {
   }
   if (param.annotations.pinToTop) {
     const ceilingExtent = ceiling ? seriesExtent(ceiling) : null;
-    yRange = computeYRange(param, series, [], 0.3, ceilingExtent ? ceilingExtent[1] : null);
+    yRange = computeYRange(
+      param,
+      series,
+      [],
+      0.3,
+      ceilingExtent ? ceilingExtent[1] : null,
+      capSeries ? capSeries.mean : null
+    );
   } else if (points.length) {
     yRange = computeYRange(param, series, points);
   }

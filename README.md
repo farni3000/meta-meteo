@@ -32,7 +32,12 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   hours at the boundaries) and the day length for the daily view, so the actual
   model hours can be read against the physical upper bound. Because Open-Meteo's
   hourly `sunshine_duration` covers the preceding hour, the hourly ceiling uses
-  the interval `[t − 1 h, t)` so both bins line up. Its hover shows the label and
+  the interval `[t − 1 h, t)` so both bins line up. The ceiling is drawn from a
+  finely sampled series (10 min plus the exact ramp corners at sunrise/sunset),
+  so both shoulders are exactly one hour wide regardless of where the sun event
+  falls within the hour; coarse hourly sampling would make them look asymmetric
+  (1 vs. 2 bins). The ±1σ error band is clamped to the astronomical maximum (and
+  to 0), so it never exceeds the physical bound. Its hover shows the label and
   value.
 - Coloured pressure bands in the air-pressure chart: `<1000` low pressure,
   `1000–1013` slightly below average, `1013–1025` normal range, `>1025` high
@@ -244,6 +249,11 @@ Response (abridged):
   "daily": {"timestamps": ["2026-09-16", "..."], "parameters": {"...": {}}},
   "sun": {
     "hourly": {"mean": [0.0, 0.0, 0.2167, 1.0, "..."], "unit": "h"},
+    "ceiling": {
+      "timestamps": ["2026-09-16T00:00", "2026-09-16T00:10", "..."],
+      "mean": [0.0, 0.0, "...", 1.0, "..."],
+      "unit": "h"
+    },
     "daily": {"mean": [12.4167, "..."], "unit": "h"}
   },
   "models_requested": ["icon_seamless", "gfs_seamless", "..."],
@@ -273,10 +283,14 @@ without a new request.
 `sun` is derived independently of the weather models from a separate Open-Meteo
 call (`daily=sunrise,sunset`) and is `null` if that call fails. `sun.hourly.mean`
 holds the maximum possible sunshine duration of each hour in hours (0–1,
-including partial hours at sunrise/sunset), `sun.daily.mean` the day length; both
-are aligned by index with the `hourly`/`daily` timestamps and only used by the
-sunshine-hours chart. The hourly value refers to the hour ending at the timestamp
-(`[t − 1 h, t)`), matching Open-Meteo's accumulation window.
+including partial hours at sunrise/sunset) and is aligned by index with the
+hourly timestamps; it is used to cap the error band. `sun.ceiling` is the same
+bound finely sampled (10 min plus the exact sunrise/sunset ramp corners) with its
+own `timestamps` and is what the frontend draws as the grey line, so both
+shoulders are exactly one hour wide. `sun.daily.mean` is the day length aligned
+with the daily timestamps (line and band cap in the daily view). The hourly value
+refers to the hour ending at the timestamp (`[t − 1 h, t)`), matching Open-Meteo's
+accumulation window. All three are only used by the sunshine-hours chart.
 
 ### `POST /api/smalltalk`
 

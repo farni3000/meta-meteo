@@ -59,10 +59,12 @@ class ResolutionBlock(BaseModel):
 class SunSeries(BaseModel):
     mean: list[Optional[float]]
     unit: str = "h"
+    timestamps: Optional[list[str]] = None
 
 
 class SunData(BaseModel):
     hourly: SunSeries
+    ceiling: SunSeries
     daily: SunSeries
 
 

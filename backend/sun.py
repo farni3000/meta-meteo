@@ -61,19 +61,55 @@ def _overlap_hours(hour_end: datetime, sunrise: datetime, sunset: datetime) -> f
     return seconds / 3600.0 if seconds > 0 else 0.0
 
 
+def _ceiling_at(moment: datetime, sun: SunTimes) -> Optional[float]:
+    sunrise, sunset = sun.by_day.get(moment.date().isoformat(), (None, None))
+    if sunrise is None or sunset is None:
+        return None
+    return round(_overlap_hours(moment, sunrise, sunset), 4)
+
+
 def hourly_ceiling(hourly_times: list[str], sun: SunTimes) -> list[Optional[float]]:
     values: list[Optional[float]] = []
     for timestamp in hourly_times:
         moment = _parse(timestamp)
-        if moment is None:
-            values.append(None)
-            continue
-        sunrise, sunset = sun.by_day.get(moment.date().isoformat(), (None, None))
-        if sunrise is None or sunset is None:
-            values.append(None)
-            continue
-        values.append(round(_overlap_hours(moment, sunrise, sunset), 4))
+        values.append(None if moment is None else _ceiling_at(moment, sun))
     return values
+
+
+def ceiling_series(
+    hourly_times: list[str], sun: SunTimes, step_minutes: int = 10
+) -> tuple[list[str], list[Optional[float]]]:
+    # The astronomical maximum is a trapezoid: ramps of exactly one hour around
+    # sunrise/sunset. Sampling it once per hour makes the shoulders look
+    # asymmetric (1 vs 2 bins), so sample it finely. The exact ramp corners are
+    # added explicitly so both shoulders stay exactly one hour wide.
+    if not hourly_times:
+        return [], []
+    start = _parse(hourly_times[0])
+    end = _parse(hourly_times[-1])
+    if start is None or end is None:
+        return [], []
+    moments: set[datetime] = set()
+    step = timedelta(minutes=step_minutes)
+    moment = start
+    while moment <= end:
+        moments.add(moment)
+        moment += step
+    for sunrise, sunset in sun.by_day.values():
+        if sunrise is None or sunset is None:
+            continue
+        for corner in (
+            sunrise,
+            sunrise + timedelta(hours=1),
+            sunset,
+            sunset + timedelta(hours=1),
+        ):
+            if start <= corner <= end:
+                moments.add(corner)
+    ordered = sorted(moments)
+    timestamps = [moment.strftime("%Y-%m-%dT%H:%M") for moment in ordered]
+    values = [_ceiling_at(moment, sun) for moment in ordered]
+    return timestamps, values
 
 
 def daily_ceiling(daily_times: list[str], sun: SunTimes) -> list[Optional[float]]:
@@ -91,7 +127,9 @@ def daily_ceiling(daily_times: list[str], sun: SunTimes) -> list[Optional[float]
 def build_sun_data(
     hourly_times: list[str], daily_times: list[str], sun: SunTimes
 ) -> SunData:
+    ceiling_times, ceiling_values = ceiling_series(hourly_times, sun)
     return SunData(
         hourly=SunSeries(mean=hourly_ceiling(hourly_times, sun), unit="h"),
+        ceiling=SunSeries(mean=ceiling_values, timestamps=ceiling_times, unit="h"),
         daily=SunSeries(mean=daily_ceiling(daily_times, sun), unit="h"),
     )
