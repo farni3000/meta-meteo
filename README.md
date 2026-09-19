@@ -38,11 +38,11 @@ darstellt. Windrichtung ist eine zirkuläre Größe und wird als Vektor-Mittel
   Die Werte werden immer
   aus der Stundenreihe (`max` bzw. `sum` je Kalendertag) berechnet, damit sie
   auch in der Tagesansicht korrekt sind. Max-Charts nutzen eine graue Box
-  (`#222e40`) mit farbigem Rand, farbigem Wert und dynamischem Pfeil – je weiter
-  der Tagespeak außen liegt, desto flacher zeigt der Pfeil zur gegenüberliegenden
-  Seite (max. 45°, `standoff` hält Abstand zum Punkt); die Box wird über den
-  Pfeilansatz gemalt und bei Zoom/Pan/Reset neu berechnet. Die Summen-Box der
-  Niederschlagsmenge sitzt ohne Pfeil mittig im Tag; die der Sonnenstunden
+  (`#222e40`) mit farbigem Rand, farbigem Wert und dynamischer Verbindungslinie
+  ohne Pfeilkopf – je weiter der Tagespeak außen liegt, desto flacher zeigt die
+  Linie zur gegenüberliegenden Seite (max. 45°, `standoff` hält Abstand zum Punkt);
+  die Box wird über den Linienansatz gemalt und bei Zoom/Pan/Reset neu berechnet.
+  Die Summen-Box der Niederschlagsmenge sitzt ohne Linie mittig im Tag; die der Sonnenstunden
   schwebt zusätzlich am oberen Chartrand (`pinToTop`) mit etwas Kopfraum, damit
   die y-Achse an der Stundenreihe skaliert, der Wert aber nicht mit der Kurve
   kollidiert.
@@ -287,8 +287,8 @@ arithmetischen Mittels verwendet wird. Soll die Größe als Pfeile in einem
 bestehenden Chart erscheinen, im Frontend-Eintrag `direction: { key, label }`
 ergänzen statt ein eigenes Chart anzulegen. Für einen Tages-Kennwert im Chart
 `annotations: { type: "max" | "sum" }` setzen. `max` zeigt den Tageshöchstwert am
-Ort des Peaks mit Pfeil (optional `dynamicArrow: true` für x-abhängige Neigung,
-max. 45°, Neuberechnung bei Zoom/Pan/Reset); `sum` die Tagessumme ohne Pfeil,
+Ort des Peaks mit Verbindungslinie ohne Pfeilkopf (optional `dynamicArrow: true`
+für x-abhängige Neigung, max. 45°, Neuberechnung bei Zoom/Pan/Reset); `sum` die Tagessumme ohne Linie,
 mittig im Tag.
 
 ## Bekannte Einschränkung: UV-Index

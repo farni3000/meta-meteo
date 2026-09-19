@@ -720,7 +720,7 @@ function valueAnnotations(param, points, ctx) {
       text: point.text,
       xanchor: "center",
       showarrow: !centered,
-      arrowhead: 2,
+      arrowhead: 0,
       arrowwidth: 1,
       arrowcolor: hexToRgba(param.color, 0.75),
       ...arrow,
