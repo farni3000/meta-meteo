@@ -14,19 +14,22 @@ def make_sun(*days: str) -> SunTimes:
 
 
 def test_hourly_ceiling_full_and_partial_hours() -> None:
+    # Each value covers the preceding hour (Open-Meteo accumulation semantics).
     times = [
-        f"{DAY}T05:00",
         f"{DAY}T06:00",
         f"{DAY}T07:00",
+        f"{DAY}T08:00",
         f"{DAY}T18:00",
         f"{DAY}T19:00",
+        f"{DAY}T20:00",
     ]
     values = hourly_ceiling(times, make_sun(DAY))
     assert values[0] == 0.0
     assert abs(values[1] - 0.3) < 1e-9
     assert values[2] == 1.0
-    assert abs(values[3] - 0.5) < 1e-9
-    assert values[4] == 0.0
+    assert values[3] == 1.0
+    assert abs(values[4] - 0.5) < 1e-9
+    assert values[5] == 0.0
 
 
 def test_hourly_ceiling_missing_day_is_none() -> None:

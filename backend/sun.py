@@ -51,8 +51,10 @@ async def fetch_sun_times(
     return SunTimes(by_day=by_day)
 
 
-def _overlap_hours(hour_start: datetime, sunrise: datetime, sunset: datetime) -> float:
-    hour_end = hour_start + timedelta(hours=1)
+def _overlap_hours(hour_end: datetime, sunrise: datetime, sunset: datetime) -> float:
+    # Open-Meteo hourly accumulations (sunshine_duration) cover the preceding
+    # hour, so the interval is [hour_end - 1h, hour_end).
+    hour_start = hour_end - timedelta(hours=1)
     start = max(hour_start, sunrise)
     end = min(hour_end, sunset)
     seconds = (end - start).total_seconds()

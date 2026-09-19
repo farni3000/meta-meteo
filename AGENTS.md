@@ -68,8 +68,10 @@ on failure). The frontend renders a chart card per entry in `CHARTS`
 - **Max-sunshine ceiling:** the sunshine chart (`sunCeiling: true` in `CHARTS`)
   draws `state.data.sun[state.mode]` as a thin grey solid line (width 1.2,
   `SUN_CEILING_COLOR`) behind the mean line; `computeYRange` includes its max so
-  it is never clipped. The cloud-cover overlay is grey-blue (`#64748b`) and
-  dashed. Data comes from `sun.py` (separate Open-Meteo call, see README).
+  it is never clipped. The cloud-cover overlay is blue (`#60a5fa`) and dashed.
+  The hourly ceiling covers the hour ending at the timestamp (`[t − 1 h, t)`),
+  matching Open-Meteo's accumulation window. Data comes from `sun.py` (separate
+  Open-Meteo call, see README).
 - **Data start from now:** `ForecastResponse.now` (local time, `YYYY-MM-DDTHH:mm`)
   is set fresh per request. The frontend sets `xaxis.minallowed` to this value
   (hourly) or to 00:00 today (daily) so that past data stays invisible even via

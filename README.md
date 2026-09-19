@@ -25,12 +25,15 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   become more transparent; hover shows cardinal direction, degrees, spread and
   model count.
 - Dashed overlays: apparent temperature in the temperature chart, cloud cover
-  (right axis, %, grey-blue) in the sunshine-hours chart. The sunshine-hours
-  chart additionally shows the astronomically maximum possible sunshine duration
-  as a thin grey solid line in the background: Open-Meteo `sunrise`/`sunset` are
-  turned into the day/night share of each hour (partial hours at the boundaries)
-  and the day length for the daily view, so the actual model hours can be read
-  against the physical upper bound. Its hover shows the label and value.
+  (right axis, %, blue `#60a5fa`) in the sunshine-hours chart. The
+  sunshine-hours chart additionally shows the astronomically maximum possible
+  sunshine duration as a thin grey solid line in the background: Open-Meteo
+  `sunrise`/`sunset` are turned into the day/night share of each hour (partial
+  hours at the boundaries) and the day length for the daily view, so the actual
+  model hours can be read against the physical upper bound. Because Open-Meteo's
+  hourly `sunshine_duration` covers the preceding hour, the hourly ceiling uses
+  the interval `[t − 1 h, t)` so both bins line up. Its hover shows the label and
+  value.
 - Coloured pressure bands in the air-pressure chart: `<1000` low pressure,
   `1000–1013` slightly below average, `1013–1025` normal range, `>1025` high
   pressure – each with a right-aligned label. Because `pressure_msl` is reduced
@@ -272,7 +275,8 @@ call (`daily=sunrise,sunset`) and is `null` if that call fails. `sun.hourly.mean
 holds the maximum possible sunshine duration of each hour in hours (0–1,
 including partial hours at sunrise/sunset), `sun.daily.mean` the day length; both
 are aligned by index with the `hourly`/`daily` timestamps and only used by the
-sunshine-hours chart.
+sunshine-hours chart. The hourly value refers to the hour ending at the timestamp
+(`[t − 1 h, t)`), matching Open-Meteo's accumulation window.
 
 ### `POST /api/smalltalk`
 

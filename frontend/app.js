@@ -21,7 +21,7 @@ const CHARTS = [
     zero: true,
     sunCeiling: true,
     overlays: [
-      { key: "cloud_cover", labelKey: "chart.sunshine.overlay", color: "#64748b", secondary: true },
+      { key: "cloud_cover", labelKey: "chart.sunshine.overlay", color: "#60a5fa", secondary: true },
     ],
     annotations: { type: "sum", pinToTop: true },
   },
@@ -1330,7 +1330,7 @@ function renderChart(param, block, series) {
       showgrid: false,
       rangemode: "tozero",
       range: [0, 100],
-      color: "#64748b",
+      color: "#60a5fa",
       title: { text: secondaryUnit },
     };
   } else if (hasDirection) {
