@@ -45,7 +45,7 @@ const I18n = (() => {
 
   const TRANSLATIONS = {
     de: {
-      "brand.tagline": "Stündliche Vorhersage als Mittelwert mehrerer Wettermodelle – mit Streuung als Fehlerband.",
+      "brand.tagline": "Viele Meinungen, ein Mittelwert: Wettervorhersage für Datenfreaks.",
       "search.placeholder": "Ort suchen (z. B. Berlin)",
       "mode.hourly": "stündlich",
       "mode.daily": "täglich",
@@ -114,7 +114,7 @@ const I18n = (() => {
       "band.high": "Hochdruck",
     },
     en: {
-      "brand.tagline": "Hourly forecast as the mean of several weather models – with spread shown as an error band.",
+      "brand.tagline": "Many opinions, one mean: weather forecasting for data nerds.",
       "search.placeholder": "Search for a place (e.g. Berlin)",
       "mode.hourly": "hourly",
       "mode.daily": "daily",
@@ -183,7 +183,7 @@ const I18n = (() => {
       "band.high": "High pressure",
     },
     fr: {
-      "brand.tagline": "Prévision horaire comme moyenne de plusieurs modèles météo – avec l'écart indiqué sous forme de bande d'erreur.",
+      "brand.tagline": "Beaucoup d'avis, une moyenne : prévisions météo pour les fans de données.",
       "search.placeholder": "Rechercher un lieu (p. ex. Berlin)",
       "mode.hourly": "horaire",
       "mode.daily": "quotidien",
@@ -252,7 +252,7 @@ const I18n = (() => {
       "band.high": "Haute pression",
     },
     es: {
-      "brand.tagline": "Pronóstico horario como media de varios modelos meteorológicos – con la dispersión mostrada como banda de error.",
+      "brand.tagline": "Muchas opiniones, una media: previsión meteorológica para fans de los datos.",
       "search.placeholder": "Buscar un lugar (p. ej. Berlín)",
       "mode.hourly": "por horas",
       "mode.daily": "diario",
@@ -321,7 +321,7 @@ const I18n = (() => {
       "band.high": "Alta presión",
     },
     it: {
-      "brand.tagline": "Previsione oraria come media di diversi modelli meteo – con la dispersione mostrata come fascia di errore.",
+      "brand.tagline": "Molte opinioni, una media: previsioni meteo per appassionati di dati.",
       "search.placeholder": "Cerca un luogo (es. Berlino)",
       "mode.hourly": "orario",
       "mode.daily": "giornaliero",
