@@ -203,6 +203,11 @@
     .btn[hidden] { display: none; }
     #status { color: var(--muted); font-size: 0.9rem; }
     #status.error { color: var(--error); }
+    #window-hint {
+      flex: 1 1 100%;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
     #location-meta {
       color: var(--muted);
       font-size: 0.9rem;
@@ -426,11 +431,11 @@
         <button data-mode="hourly" class="active" data-i18n="mode.hourly">stündlich</button>
         <button data-mode="daily" data-i18n="mode.daily">täglich</button>
       </div>
-      <span id="window-hint"></span>
       <button id="refresh" class="btn" data-i18n="toolbar.refresh" data-i18n-title="toolbar.refreshTitle" hidden>Aktualisieren</button>
       <button id="reset-zoom" class="btn" data-i18n="toolbar.resetZoom" hidden>Zoom für alle zurücksetzen</button>
       <button id="smalltalk" class="btn" data-i18n="toolbar.smalltalk" data-i18n-title="toolbar.smalltalkTitle" hidden>Hilfe – Ich brauch ein Smalltalk Thema</button>
       <span id="status"></span>
+      <span id="window-hint"></span>
     </div>
     <div id="location-meta"></div>
 
