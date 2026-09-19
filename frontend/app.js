@@ -137,6 +137,7 @@ const suggestions = document.getElementById("suggestions");
 const statusEl = document.getElementById("status");
 const windowHint = document.getElementById("window-hint");
 const locationMeta = document.getElementById("location-meta");
+const alertsEl = document.getElementById("alerts");
 const chartsEl = document.getElementById("charts");
 const modelsPanel = document.getElementById("models-panel");
 const modelsSummary = document.getElementById("models-summary");
@@ -384,11 +385,11 @@ async function toggleFavorite() {
         method: "DELETE",
       });
     } else {
-      const { name, country, admin1, latitude, longitude, timezone } = state.selected;
+      const { name, country, country_code, admin1, latitude, longitude, timezone } = state.selected;
       response = await fetch("/api/favorites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, country, admin1, latitude, longitude, timezone }),
+        body: JSON.stringify({ name, country, country_code, admin1, latitude, longitude, timezone }),
       });
     }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -443,6 +444,7 @@ async function selectLocation(location, options = {}) {
       lat: location.latitude,
       lon: location.longitude,
       days: 7,
+      lang: I18n.getLang(),
     });
     if (options.refresh) {
       params.set("refresh", "1");
@@ -450,6 +452,7 @@ async function selectLocation(location, options = {}) {
     }
     if (location.name) params.set("name", location.name);
     if (location.country) params.set("country", location.country);
+    if (location.country_code) params.set("country_code", location.country_code);
     if (location.admin1) params.set("admin1", location.admin1);
     if (location.timezone) params.set("tz", location.timezone);
 
@@ -1531,6 +1534,130 @@ function renderModelsPanel() {
   modelsPanel.hidden = false;
 }
 
+const ALERT_SEVERITY_KEYS = ["minor", "moderate", "severe", "extreme"];
+
+function alertSeverityKey(alert) {
+  const level = Math.min(Math.max(alert.severity_level || 1, 1), 4);
+  return ALERT_SEVERITY_KEYS[level - 1];
+}
+
+function alertSourceLabel(source) {
+  const key = `alerts.source.${source}`;
+  const label = t(key);
+  return label === key ? source : label;
+}
+
+function formatAlertTime(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? null : date.toLocaleString(locale());
+}
+
+function alertValidity(alert) {
+  const from = formatAlertTime(alert.onset);
+  const to = formatAlertTime(alert.expires);
+  if (from && to) return t("alerts.fromTo", { from, to });
+  if (to) return t("alerts.until", { datetime: to });
+  if (from) return t("alerts.from", { datetime: from });
+  return "";
+}
+
+function renderAlertCard(alert) {
+  const level = Math.min(Math.max(alert.severity_level || 1, 1), 4);
+  const card = document.createElement("div");
+  card.className = `alert-card level-${level}`;
+
+  const head = document.createElement("div");
+  head.className = "alert-head";
+
+  const badge = document.createElement("span");
+  badge.className = "alert-sev";
+  badge.textContent = t(`alerts.${alertSeverityKey(alert)}`);
+
+  const main = document.createElement("div");
+  main.className = "alert-main";
+
+  const headline = document.createElement("div");
+  headline.className = "alert-headline";
+  headline.textContent = alert.headline || alert.event || "";
+  main.appendChild(headline);
+
+  const metaParts = [];
+  if (alert.event && alert.event !== headline.textContent) metaParts.push(alert.event);
+  if (alert.area) metaParts.push(alert.area);
+  metaParts.push(alertSourceLabel(alert.source));
+  const meta = document.createElement("div");
+  meta.className = "alert-meta";
+  meta.textContent = metaParts.join(" · ");
+  main.appendChild(meta);
+
+  const validity = alertValidity(alert);
+  if (validity) {
+    const valid = document.createElement("div");
+    valid.className = "alert-meta";
+    valid.textContent = validity;
+    main.appendChild(valid);
+  }
+
+  if (alert.description || alert.instruction) {
+    const body = document.createElement("div");
+    body.className = "alert-body";
+    body.hidden = true;
+    if (alert.description) {
+      const description = document.createElement("div");
+      description.textContent = alert.description;
+      body.appendChild(description);
+    }
+    if (alert.instruction) {
+      const instruction = document.createElement("div");
+      instruction.className = "alert-instruction";
+      instruction.textContent = alert.instruction;
+      body.appendChild(instruction);
+    }
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "alert-toggle";
+    toggle.textContent = t("alerts.more");
+    toggle.addEventListener("click", () => {
+      body.hidden = !body.hidden;
+      toggle.textContent = body.hidden ? t("alerts.more") : t("alerts.less");
+    });
+    main.appendChild(toggle);
+    main.appendChild(body);
+  }
+
+  head.append(badge, main);
+  card.appendChild(head);
+
+  if (alert.url) {
+    const link = document.createElement("a");
+    link.href = alert.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.className = "alert-toggle";
+    link.textContent = t("alerts.details");
+    main.appendChild(link);
+  }
+  return card;
+}
+
+function renderAlerts() {
+  const alerts = (state.data && state.data.alerts) || [];
+  alertsEl.innerHTML = "";
+  alertsEl.hidden = alerts.length === 0;
+  if (!alerts.length) return;
+
+  const title = document.createElement("div");
+  title.className = "alerts-title";
+  title.textContent = t("alerts.title");
+  alertsEl.appendChild(title);
+
+  const list = document.createElement("div");
+  list.className = "alerts-list";
+  alerts.forEach((alert) => list.appendChild(renderAlertCard(alert)));
+  alertsEl.appendChild(list);
+}
+
 function renderLocationMeta() {
   const { location, models_requested, models_used, generated_at } = state.data;
   const place = [location.name, location.admin1, location.country].filter(Boolean).join(", ");
@@ -1567,6 +1694,7 @@ function renderLocationMeta() {
 
 function render() {
   renderLocationMeta();
+  renderAlerts();
   renderCharts();
   renderModelsPanel();
   renderFavorites();

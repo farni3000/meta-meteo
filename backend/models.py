@@ -22,6 +22,7 @@ class NormalizedForecast:
 class GeoResult(BaseModel):
     name: str
     country: Optional[str] = None
+    country_code: Optional[str] = None
     admin1: Optional[str] = None
     latitude: float
     longitude: float
@@ -36,6 +37,7 @@ class GeocodeResponse(BaseModel):
 class LocationInfo(BaseModel):
     name: str
     country: Optional[str] = None
+    country_code: Optional[str] = None
     admin1: Optional[str] = None
     lat: float
     lon: float
@@ -68,12 +70,28 @@ class SunData(BaseModel):
     daily: SunSeries
 
 
+class WeatherAlert(BaseModel):
+    id: str
+    source: str
+    severity: str
+    severity_level: int
+    event: Optional[str] = None
+    headline: Optional[str] = None
+    description: Optional[str] = None
+    instruction: Optional[str] = None
+    onset: Optional[str] = None
+    expires: Optional[str] = None
+    area: Optional[str] = None
+    url: Optional[str] = None
+
+
 class ForecastResponse(BaseModel):
     location: LocationInfo
     resolution: str
     hourly: ResolutionBlock
     daily: ResolutionBlock
     sun: Optional[SunData] = None
+    alerts: list[WeatherAlert] = []
     models_requested: list[str]
     models_used: list[str]
     generated_at: str
@@ -83,6 +101,7 @@ class ForecastResponse(BaseModel):
 class FavoriteCreate(BaseModel):
     name: str
     country: Optional[str] = None
+    country_code: Optional[str] = None
     admin1: Optional[str] = None
     latitude: float
     longitude: float

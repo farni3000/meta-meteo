@@ -12,6 +12,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
 from .aggregation import aggregate
+from .alerts import fetch_alerts
 from .cache import TTLCache
 from .config import (
     CACHE_TTL_SECONDS,
@@ -115,12 +116,19 @@ async def forecast(
     models: Optional[str] = Query(None),
     name: Optional[str] = Query(None),
     country: Optional[str] = Query(None),
+    country_code: Optional[str] = Query(None),
     admin1: Optional[str] = Query(None),
     tz: Optional[str] = Query(None),
+    lang: str = Query(DEFAULT_GEOCODE_LANGUAGE),
     refresh: bool = Query(False),
 ) -> ForecastResponse:
     model_list = _resolve_models(models)
-    cache_key = f"{lat:.3f}:{lon:.3f}:{days}:{','.join(sorted(model_list))}"
+    if lang not in GEOCODE_LANGUAGES:
+        lang = DEFAULT_GEOCODE_LANGUAGE
+    cache_key = (
+        f"{lat:.3f}:{lon:.3f}:{days}:{','.join(sorted(model_list))}:"
+        f"{(country_code or '').upper()}:{lang}"
+    )
     cached = None if refresh else _cache.get(cache_key)
     if cached is not None:
         cached.now = _local_now(cached.location.timezone)
@@ -132,10 +140,14 @@ async def forecast(
         for model in model_list
     ]
     gathered = await asyncio.gather(
-        *tasks, fetch_sun_times(client, lat, lon, days), return_exceptions=True
+        *tasks,
+        fetch_sun_times(client, lat, lon, days),
+        fetch_alerts(client, lat, lon, country_code, lang),
+        return_exceptions=True,
     )
-    results = gathered[:-1]
-    sun_times = gathered[-1]
+    results = gathered[:-2]
+    sun_times = gathered[-2]
+    alerts_result = gathered[-1]
 
     forecasts: list[NormalizedForecast] = []
     errors: list[str] = []
@@ -157,10 +169,12 @@ async def forecast(
         if isinstance(sun_times, SunTimes)
         else None
     )
+    alerts = alerts_result if isinstance(alerts_result, list) else []
 
     location = LocationInfo(
         name=name or f"{lat:.4f}, {lon:.4f}",
         country=country,
+        country_code=country_code,
         admin1=admin1,
         lat=lat,
         lon=lon,
@@ -172,6 +186,7 @@ async def forecast(
         hourly=hourly_block,
         daily=daily_block,
         sun=sun,
+        alerts=alerts,
         models_requested=model_list,
         models_used=models_used,
         generated_at=datetime.now(timezone.utc).isoformat(),

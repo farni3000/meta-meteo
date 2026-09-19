@@ -91,6 +91,57 @@ DISPLAY_NAMES: dict[str, str] = {
 FORECAST_API_URL = "https://api.open-meteo.com/v1/forecast"
 GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
 
+BRIGHTSKY_ALERTS_URL = "https://api.brightsky.dev/alerts"
+NWS_ALERTS_URL = "https://api.weather.gov/alerts/active"
+METEOALARM_FEED_URL = (
+    "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-{slug}"
+)
+NWS_USER_AGENT = "MetaMeteo/1.0 (local weather aggregation; +https://github.com/farni3000/meta-meteo)"
+
+# ISO 3166-1 alpha-2 country code -> MeteoAlarm feed slug. Germany (DE) and the
+# United States (US) are handled by point-accurate sources (Bright Sky / NWS)
+# before this table is consulted.
+METEOALARM_COUNTRY_SLUGS: dict[str, str] = {
+    "AD": "andorra",
+    "AT": "austria",
+    "BA": "bosnia-herzegovina",
+    "BE": "belgium",
+    "BG": "bulgaria",
+    "CH": "switzerland",
+    "CY": "cyprus",
+    "CZ": "czechia",
+    "DK": "denmark",
+    "EE": "estonia",
+    "ES": "spain",
+    "FI": "finland",
+    "FR": "france",
+    "GB": "united-kingdom",
+    "GR": "greece",
+    "HR": "croatia",
+    "HU": "hungary",
+    "IE": "ireland",
+    "IL": "israel",
+    "IS": "iceland",
+    "IT": "italy",
+    "LT": "lithuania",
+    "LU": "luxembourg",
+    "LV": "latvia",
+    "MD": "moldova",
+    "ME": "montenegro",
+    "MK": "republic-of-north-macedonia",
+    "MT": "malta",
+    "NL": "netherlands",
+    "NO": "norway",
+    "PL": "poland",
+    "PT": "portugal",
+    "RO": "romania",
+    "RS": "serbia",
+    "SE": "sweden",
+    "SI": "slovenia",
+    "SK": "slovakia",
+    "UA": "ukraine",
+}
+
 DEFAULT_GEOCODE_LANGUAGE = "de"
 GEOCODE_LANGUAGES = {"de", "en", "fr", "es", "it"}
 

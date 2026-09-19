@@ -108,8 +108,16 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   and shows a short, funny opener in a modal. The generated text follows the
   selected interface language and can be regenerated ("Again"). Requires a
   `DEEPSEEK_API_KEY` in `.env`; the key never reaches the browser.
+- Weather warnings above the charts: fetched in parallel with the forecast and
+  rendered as a severity-coloured banner (CAP levels minor/moderate/severe/
+  extreme → yellow/orange/red/violet) with an expandable description and
+  instruction. The source depends on the country of the location: DWD/Bright Sky
+  for Germany (point-accurate, German/English text), NWS (`api.weather.gov`) for
+  the US, and the country feeds of MeteoAlarm for the rest of Europe. Without an
+  active warning the banner stays hidden. A failed warning request never fails
+  the forecast; it simply yields no alerts.
 - Short-lived in-memory cache (TTL 10 minutes), key = coordinates + model
-  selection.
+  selection + country code + UI language.
 - No scheduler, no scraping, no API key for the forecast itself. The forecast
   pipeline uses no LLM; the optional smalltalk button is the only DeepSeek call.
 
@@ -214,8 +222,8 @@ calculation (`now`) incl. UTC fallback.
 | `count` | Max. results, 1–20 (default 8) |
 | `lang` | Language of place names: `de`, `en`, `fr`, `es`, `it` (default `de`) |
 
-Returns a list of possible places (`name`, `country`, `admin1`, `latitude`,
-`longitude`, `timezone`) for disambiguation.
+Returns a list of possible places (`name`, `country`, `country_code`, `admin1`,
+`latitude`, `longitude`, `timezone`) for disambiguation.
 
 ### `GET /api/forecast`
 
@@ -224,14 +232,15 @@ Returns a list of possible places (`name`, `country`, `admin1`, `latitude`,
 | `lat`, `lon` | Coordinates (required) |
 | `days` | Forecast days, 1–16 (default 7) |
 | `models` | Comma-separated model list (default from config) |
-| `name`, `country`, `admin1`, `tz` | Optional metadata for display |
+| `name`, `country`, `country_code`, `admin1`, `tz` | Optional metadata for display and for picking the warning source |
+| `lang` | UI language (affects the warning texts): `de`, `en`, `fr`, `es`, `it` (default `de`) |
 | `refresh` | `true` to bypass the cache and load fresh model data |
 
 Response (abridged):
 
 ```json
 {
-  "location": {"name": "Berlin", "country": "Germany", "lat": 52.52, "lon": 13.41, "timezone": "Europe/Berlin"},
+  "location": {"name": "Berlin", "country": "Germany", "country_code": "DE", "lat": 52.52, "lon": 13.41, "timezone": "Europe/Berlin"},
   "resolution": "hourly",
   "hourly": {
     "timestamps": ["2026-09-16T00:00", "..."],
@@ -256,6 +265,22 @@ Response (abridged):
     },
     "daily": {"mean": [12.4167, "..."], "unit": "h"}
   },
+  "alerts": [
+    {
+      "id": "2.49.0.0.276.0.DWD.PVW....",
+      "source": "brightsky",
+      "severity": "moderate",
+      "severity_level": 2,
+      "event": "STURMBÖEN",
+      "headline": "Amtliche WARNUNG vor STURMBÖEN",
+      "description": "Es treten Sturmböen ...",
+      "instruction": "frei stehende Objekte sichern ...",
+      "onset": "2026-09-20T10:00:00+00:00",
+      "expires": "2026-09-20T18:00:00+00:00",
+      "area": null,
+      "url": null
+    }
+  ],
   "models_requested": ["icon_seamless", "gfs_seamless", "..."],
   "models_used": ["icon_seamless", "gfs_seamless", "..."],
   "generated_at": "2026-09-16T17:27:21+00:00",
@@ -291,6 +316,20 @@ shoulders are exactly one hour wide. `sun.daily.mean` is the day length aligned
 with the daily timestamps (line and band cap in the daily view). The hourly value
 refers to the hour ending at the timestamp (`[t − 1 h, t)`), matching Open-Meteo's
 accumulation window. All three are only used by the sunshine-hours chart.
+
+`alerts` holds the active official weather warnings for the location, sorted by
+severity (highest first) and then by onset. The `source` decides the provider:
+`brightsky` (DWD, only `country_code=DE`, point-accurate, text chosen from the
+`_de`/`_en` variants according to `lang`), `nws` (US, `country_code=US`,
+point-accurate, English) or `meteoalarm` (other European country codes, country
+feed, English/local short texts). `severity` is the CAP level
+(`minor`/`moderate`/`severe`/`extreme`) with `severity_level` 1–4 for colouring.
+Warnings are fetched in parallel with the models; a failure or an unknown country
+simply yields `[]` and never fails the whole forecast. Because the alerts are
+part of the cached forecast, the cache key includes `country_code` and `lang`.
+Note that the MeteoAlarm feeds are **country-wide**, not point-accurate – a
+warning can appear that does not apply to the exact coordinates (Germany and the
+US use point-accurate sources instead).
 
 ### `POST /api/smalltalk`
 
@@ -390,6 +429,7 @@ meta-meteo/
     cache.py             # TTL cache
     favorites.py         # FavoritesStore (JSON persistence)
     sun.py               # sunrise/sunset fetch + max-sunshine ceiling
+    alerts.py            # weather warnings (Bright Sky / NWS / MeteoAlarm)
     smalltalk.py         # DeepSeek prompt + client for the smalltalk button
     sources/
       base.py            # ForecastSource(ABC)
@@ -401,6 +441,7 @@ meta-meteo/
       test_favorites.py
       test_local_now.py
       test_sun.py
+      test_alerts.py
   frontend/
     index.html
     i18n.js              # translations, language detection, locale/cardinal directions

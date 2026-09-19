@@ -32,6 +32,7 @@ class GeocodingClient:
                 GeoResult(
                     name=item["name"],
                     country=item.get("country"),
+                    country_code=item.get("country_code"),
                     admin1=item.get("admin1"),
                     latitude=item["latitude"],
                     longitude=item["longitude"],

@@ -24,6 +24,7 @@ backend/
   cache.py         # in-memory TTL cache
   favorites.py     # JSON persistence (data/favorites.json)
   sun.py           # Open-Meteo sunrise/sunset fetch + max-sunshine ceiling
+  alerts.py        # warnings (Bright Sky/DWD, NWS, MeteoAlarm feeds)
   smalltalk.py     # DeepSeek prompt + client for the smalltalk button
   sources/
     open_meteo.py  # Open-Meteo client, one request per model
@@ -44,8 +45,11 @@ with a `ParameterSeries` per parameter for each resolution (hourly/daily).
 `main.py` caches and serves `ForecastResponse`. In parallel with the model
 requests, `sun.py` fetches `sunrise`/`sunset` from Open-Meteo and derives the
 max-sunshine ceiling (`ForecastResponse.sun`, hours, model-independent; `null`
-on failure). The frontend renders a chart card per entry in `CHARTS`
-(`frontend/app.js`); `STD` is drawn as an error band.
+on failure), and `alerts.py` fetches official warnings
+(`ForecastResponse.alerts`; source by location `country_code`: DWD/Bright Sky
+for DE, NWS for US, MeteoAlarm country feeds for the rest of Europe; `[]` on
+failure or unknown country). The frontend renders a chart card per entry in
+`CHARTS` (`frontend/app.js`); `STD` is drawn as an error band.
 
 ## Important conventions
 
@@ -57,6 +61,13 @@ on failure). The frontend renders a chart card per entry in `CHARTS`
   (`sin`/`cos` → `atan2`) and circular standard deviation instead of the
   arithmetic mean. Never average angles arithmetically.
 - **One request per model**, in parallel via `asyncio.gather`.
+- **Warnings:** `alerts.py` picks the source by `country_code` (DE → Bright
+  Sky, US → NWS, other European codes → MeteoAlarm country feed) and normalises
+  to `WeatherAlert` (CAP `severity` plus `severity_level` 1–4). Non-fatal (`[]`
+  on error/unknown country). The banner is rendered by `renderAlerts()` above
+  the charts, texts localised via `alerts.*` keys. `country_code` and `lang` are
+  part of the forecast cache key. MeteoAlarm feeds are country-wide, not
+  point-accurate.
 - **Missing values** are excluded, never treated as 0; if all are missing,
   `mean`/`std` are `null`.
 - **Frontend console/DOM changes** without a build step: `frontend/app.js`
