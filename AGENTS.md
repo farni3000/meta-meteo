@@ -61,7 +61,10 @@ card per entry in `CHARTS` (`frontend/app.js`); `STD` is drawn as an error band.
 - **Data start from now:** `ForecastResponse.now` (local time, `YYYY-MM-DDTHH:mm`)
   is set fresh per request. The frontend sets `xaxis.minallowed` to this value
   (hourly) or to 00:00 today (daily) so that past data stays invisible even via
-  zoom/pan.
+  zoom/pan. The default hourly window is a sliding 3 days from now
+  (`hourlyWindowEnd`, `HOURLY_WINDOW_DAYS`); a trailing calendar day with less
+  than 3 h inside the window is dropped, and `dailyHighlights` uses only the
+  visible part of that last day (analogous to the first day's `remaining <= 3`).
 - **Refresh:** the refresh button calls `selectLocation(state.selected,
   { refresh: true })`; `refresh=1` on `/api/forecast` skips the TTL cache
   lookup, fetches fresh model data and then overwrites the cache entry.

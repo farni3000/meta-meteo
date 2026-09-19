@@ -213,6 +213,18 @@ function startBound() {
   return state.mode === "hourly" ? now : `${now.slice(0, 10)}T00:00`;
 }
 
+function hourlyWindowEnd(bound, timestamps) {
+  if (!timestamps.length) return null;
+  const lastMs = wallClockMs(timestamps[timestamps.length - 1]);
+  const boundMs = bound ? wallClockMs(bound) : wallClockMs(timestamps[0]);
+  let endMs = Math.min(boundMs + HOURLY_WINDOW_DAYS * 24 * 3600000, lastMs);
+  const day = isoLocal(endMs).slice(0, 10);
+  if ((endMs - localMs(day)) / 3600000 < 3) {
+    endMs = localMs(day);
+  }
+  return isoLocal(endMs);
+}
+
 function debounce(fn, wait) {
   let timer = null;
   return (...args) => {
@@ -622,7 +634,9 @@ function dailyHighlights(param, context) {
   const unit = source.unit || "";
   const mode = context && context.mode;
   const bound = context && context.bound;
+  const endBound = context && context.endBound;
   const startedDay = mode === "hourly" && bound ? bound.slice(0, 10) : null;
+  const endDay = mode === "hourly" && endBound ? endBound.slice(0, 10) : null;
   const groups = new Map();
   hourly.timestamps.forEach((timestamp, index) => {
     const value = source.mean[index];
@@ -644,6 +658,10 @@ function dailyHighlights(param, context) {
         entries = entries.filter((entry) => entry.timestamp >= bound);
         const remaining = (localMs(nextDayString(group.day)) - localMs(bound)) / 3600000;
         if (remaining <= 3 || !entries.length) return;
+      } else if (group.day === endDay) {
+        entries = entries.filter((entry) => entry.timestamp <= endBound);
+        const visible = (wallClockMs(endBound) - localMs(group.day)) / 3600000;
+        if (visible < 3 || !entries.length) return;
       }
       if (!entries.length) return;
       const type = param.annotations.type;
@@ -1042,7 +1060,7 @@ function renderChart(param, block, series) {
     const start = bound && bound > timestamps[0] ? bound : timestamps[0];
     let end;
     if (state.mode === "hourly") {
-      end = timestamps[Math.min(24 * HOURLY_WINDOW_DAYS, timestamps.length - 1)];
+      end = hourlyWindowEnd(bound, timestamps);
     } else {
       dailyEnd = nextDayString(timestamps[timestamps.length - 1].slice(0, 10));
       end = dailyEnd;
@@ -1070,7 +1088,7 @@ function renderChart(param, block, series) {
   }
 
   const points = param.annotations
-    ? dailyHighlights(param, { mode: state.mode, bound })
+    ? dailyHighlights(param, { mode: state.mode, bound, endBound: xRange && xRange[1] })
     : [];
 
   let yRange = null;

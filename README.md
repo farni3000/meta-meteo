@@ -32,8 +32,10 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   to sea level, the thresholds apply regardless of the location's altitude. The
   y-axis scales dynamically to the data range so that only the relevant bands are
   visible.
-- "hourly / daily" toggle; hourly starts the view with the first 3 days (zoom out
-  for all 7 days).
+- "hourly / daily" toggle; hourly starts the view with a sliding 3-day window
+  from now (zoom out for all 7 days). A trailing calendar day is only included
+  if at least 3 hours of it fall inside the window, otherwise the window ends at
+  its midnight.
 - Daily highlights directly in the chart: temperature, wind, UV index,
   precipitation probability and air pressure show the daily maximum per day,
   precipitation amount and sunshine hours the daily total. The values are always
@@ -67,7 +69,9 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
 - Data start from "now": the hourly graph begins at the current minute (local
   time of the location). A hard axis limit (`xaxis.minallowed`) prevents past
   hours from becoming visible – even via zoom or pan. The daily chart starts with
-  today at 00:00.
+  today at 00:00. The default hourly window spans 3 days from now
+  (`hourlyWindowEnd`); its trailing partial day follows the same 3-hour rule as
+  the first day's daily highlight.
 - Zoom sync: the "Apply zoom to all" button in each chart transfers the visible
   time range to all other charts; "Reset zoom" restores the default view.
 - Refresh: the button reloads the forecast for the current location and bypasses
