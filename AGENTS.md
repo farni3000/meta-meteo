@@ -23,6 +23,7 @@ backend/
   aggregation.py   # mean/std, circular aggregation, daily fallback
   cache.py         # in-memory TTL cache
   favorites.py     # JSON persistence (data/favorites.json)
+  sun.py           # Open-Meteo sunrise/sunset fetch + max-sunshine ceiling
   smalltalk.py     # DeepSeek prompt + client for the smalltalk button
   sources/
     open_meteo.py  # Open-Meteo client, one request per model
@@ -40,8 +41,11 @@ frontend/
 `sources/open_meteo.py` normalises each model response into `NormalizedForecast`
 (`models.py`). `aggregation.aggregate()` builds from this a `ResolutionBlock`
 with a `ParameterSeries` per parameter for each resolution (hourly/daily).
-`main.py` caches and serves `ForecastResponse`. The frontend renders a chart
-card per entry in `CHARTS` (`frontend/app.js`); `STD` is drawn as an error band.
+`main.py` caches and serves `ForecastResponse`. In parallel with the model
+requests, `sun.py` fetches `sunrise`/`sunset` from Open-Meteo and derives the
+max-sunshine ceiling (`ForecastResponse.sun`, hours, model-independent; `null`
+on failure). The frontend renders a chart card per entry in `CHARTS`
+(`frontend/app.js`); `STD` is drawn as an error band.
 
 ## Important conventions
 
@@ -61,6 +65,11 @@ card per entry in `CHARTS` (`frontend/app.js`); `STD` is drawn as an error band.
   (`{ from, to, label, color }`), `renderChart` renders filled areas, boundary
   lines and right-aligned labels; the y-axis scales dynamically to the data
   range. Example: the pressure bands in the air-pressure chart.
+- **Max-sunshine ceiling:** the sunshine chart (`sunCeiling: true` in `CHARTS`)
+  draws `state.data.sun[state.mode]` as a thin grey solid line (width 1.2,
+  `SUN_CEILING_COLOR`) behind the mean line; `computeYRange` includes its max so
+  it is never clipped. The cloud-cover overlay is grey-blue (`#64748b`) and
+  dashed. Data comes from `sun.py` (separate Open-Meteo call, see README).
 - **Data start from now:** `ForecastResponse.now` (local time, `YYYY-MM-DDTHH:mm`)
   is set fresh per request. The frontend sets `xaxis.minallowed` to this value
   (hourly) or to 00:00 today (daily) so that past data stays invisible even via

@@ -25,7 +25,12 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   become more transparent; hover shows cardinal direction, degrees, spread and
   model count.
 - Dashed overlays: apparent temperature in the temperature chart, cloud cover
-  (right axis, %) in the sunshine-hours chart.
+  (right axis, %, grey-blue) in the sunshine-hours chart. The sunshine-hours
+  chart additionally shows the astronomically maximum possible sunshine duration
+  as a thin grey solid line in the background: Open-Meteo `sunrise`/`sunset` are
+  turned into the day/night share of each hour (partial hours at the boundaries)
+  and the day length for the daily view, so the actual model hours can be read
+  against the physical upper bound. Its hover shows the label and value.
 - Coloured pressure bands in the air-pressure chart: `<1000` low pressure,
   `1000–1013` slightly below average, `1013–1025` normal range, `>1025` high
   pressure – each with a right-aligned label. Because `pressure_msl` is reduced
@@ -48,12 +53,12 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   zoom/pan/reset. The sum box for precipitation amount sits centred in the day
   without a line; the one for sunshine hours additionally floats at the top edge
   of the chart (`pinToTop`) with some headroom so that the y-axis scales to the
-  hourly series but the value does not collide with the curve. From the partial
-  (first) day, only the remaining hours appear in hourly mode and only if more
-  than three hours are left; the value and position then refer to the visible
-  remainder. In daily mode the full day is used. Highlights that round to `0.0`
-  are omitted; configuration is via the `annotations` field in the respective
-  `CHARTS` entry.
+  hourly series and the maximum-sunshine line but the value does not collide
+  with the curve. From the partial (first) day, only the remaining hours appear
+  in hourly mode and only if more than three hours are left; the value and
+  position then refer to the visible remainder. In daily mode the full day is
+  used. Highlights that round to `0.0` are omitted; configuration is via the
+  `annotations` field in the respective `CHARTS` entry.
 - Consistent number notation: all values in hover tooltips and chart annotations
   are output with one decimal place and a unit (e.g. `23.4 °C`, `3.2 mm`).
   Formatting is centralised via `formatNumber`/`formatValue` with the
@@ -234,6 +239,10 @@ Response (abridged):
     }
   },
   "daily": {"timestamps": ["2026-09-16", "..."], "parameters": {"...": {}}},
+  "sun": {
+    "hourly": {"mean": [0.0, 0.0, 0.2167, 1.0, "..."], "unit": "h"},
+    "daily": {"mean": [12.4167, "..."], "unit": "h"}
+  },
   "models_requested": ["icon_seamless", "gfs_seamless", "..."],
   "models_used": ["icon_seamless", "gfs_seamless", "..."],
   "generated_at": "2026-09-16T17:27:21+00:00",
@@ -257,6 +266,13 @@ itself; additionally the frontend appends a cache buster on refresh.
 value. With exactly one model `std = 0`; with no model `mean`/`std` are `null`.
 `hourly` and `daily` are always both included, the toggle in the frontend works
 without a new request.
+
+`sun` is derived independently of the weather models from a separate Open-Meteo
+call (`daily=sunrise,sunset`) and is `null` if that call fails. `sun.hourly.mean`
+holds the maximum possible sunshine duration of each hour in hours (0–1,
+including partial hours at sunrise/sunset), `sun.daily.mean` the day length; both
+are aligned by index with the `hourly`/`daily` timestamps and only used by the
+sunshine-hours chart.
 
 ### `POST /api/smalltalk`
 
@@ -355,6 +371,7 @@ meta-meteo/
     aggregation.py       # mean/std, daily fallback
     cache.py             # TTL cache
     favorites.py         # FavoritesStore (JSON persistence)
+    sun.py               # sunrise/sunset fetch + max-sunshine ceiling
     smalltalk.py         # DeepSeek prompt + client for the smalltalk button
     sources/
       base.py            # ForecastSource(ABC)
@@ -365,6 +382,7 @@ meta-meteo/
       test_parameters.py
       test_favorites.py
       test_local_now.py
+      test_sun.py
   frontend/
     index.html
     i18n.js              # translations, language detection, locale/cardinal directions

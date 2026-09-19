@@ -40,6 +40,7 @@ from .models import (
 from .smalltalk import generate_smalltalk
 from .sources.geocoding import GeocodingClient
 from .sources.open_meteo import OpenMeteoForecastSource
+from .sun import SunTimes, build_sun_data, fetch_sun_times
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 _cache = TTLCache(CACHE_TTL_SECONDS)
@@ -130,7 +131,11 @@ async def forecast(
         OpenMeteoForecastSource(client, model).fetch(lat, lon, days)
         for model in model_list
     ]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    gathered = await asyncio.gather(
+        *tasks, fetch_sun_times(client, lat, lon, days), return_exceptions=True
+    )
+    results = gathered[:-1]
+    sun_times = gathered[-1]
 
     forecasts: list[NormalizedForecast] = []
     errors: list[str] = []
@@ -147,6 +152,11 @@ async def forecast(
         )
 
     hourly_block, daily_block, models_used = aggregate(forecasts)
+    sun = (
+        build_sun_data(hourly_block.timestamps, daily_block.timestamps, sun_times)
+        if isinstance(sun_times, SunTimes)
+        else None
+    )
 
     location = LocationInfo(
         name=name or f"{lat:.4f}, {lon:.4f}",
@@ -161,6 +171,7 @@ async def forecast(
         resolution="hourly",
         hourly=hourly_block,
         daily=daily_block,
+        sun=sun,
         models_requested=model_list,
         models_used=models_used,
         generated_at=datetime.now(timezone.utc).isoformat(),

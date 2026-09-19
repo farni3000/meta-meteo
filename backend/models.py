@@ -56,11 +56,22 @@ class ResolutionBlock(BaseModel):
     parameters: dict[str, ParameterSeries]
 
 
+class SunSeries(BaseModel):
+    mean: list[Optional[float]]
+    unit: str = "h"
+
+
+class SunData(BaseModel):
+    hourly: SunSeries
+    daily: SunSeries
+
+
 class ForecastResponse(BaseModel):
     location: LocationInfo
     resolution: str
     hourly: ResolutionBlock
     daily: ResolutionBlock
+    sun: Optional[SunData] = None
     models_requested: list[str]
     models_used: list[str]
     generated_at: str

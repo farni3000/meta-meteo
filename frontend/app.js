@@ -19,8 +19,9 @@ const CHARTS = [
     infoKey: "chart.sunshine.info",
     color: "#fbbf24",
     zero: true,
+    sunCeiling: true,
     overlays: [
-      { key: "cloud_cover", labelKey: "chart.sunshine.overlay", color: "#94a3b8", secondary: true },
+      { key: "cloud_cover", labelKey: "chart.sunshine.overlay", color: "#64748b", secondary: true },
     ],
     annotations: { type: "sum", pinToTop: true },
   },
@@ -686,10 +687,11 @@ function dailyHighlights(param, context) {
   return highlights;
 }
 
-function computeYRange(param, series, points, topFactor = 0.22) {
+function computeYRange(param, series, points, topFactor = 0.22, extraMax = null) {
   const extent = seriesExtent(series) || [0, 0];
   let min = extent[0];
   let max = extent[1];
+  if (extraMax !== null && extraMax !== undefined) max = Math.max(max, extraMax);
   points.forEach((point) => {
     if (point.value === null || point.value === undefined) return;
     max = Math.max(max, point.value);
@@ -850,6 +852,33 @@ function overlayTrace(x, series, overlay) {
     name: t(overlay.labelKey),
     yaxis: overlay.secondary ? "y2" : "y",
     hovertemplate: t("chart.hoverOverlayTemplate", { label: t(overlay.labelKey) }),
+  };
+}
+
+const SUN_CEILING_COLOR = "#9ca3af";
+
+function sunSeries(mode) {
+  const sun = state.data && state.data.sun;
+  if (!sun || !sun[mode] || !sun[mode].mean) return null;
+  if (!sun[mode].mean.some((value) => value !== null && value !== undefined)) return null;
+  return sun[mode];
+}
+
+function ceilingTrace(x, series, label) {
+  const unit = series.unit || "";
+  const customdata = series.mean.map((value, index) => [
+    value === null || value === undefined ? "–" : formatValue(value, unit),
+    hoverXLabel(x[index]),
+  ]);
+  return {
+    x,
+    y: series.mean,
+    customdata,
+    type: "scatter",
+    mode: "lines",
+    line: { color: SUN_CEILING_COLOR, width: 1.2 },
+    name: label,
+    hovertemplate: t("chart.hoverCeilingTemplate", { label }),
   };
 }
 
@@ -1185,6 +1214,10 @@ function renderChart(param, block, series) {
   }
 
   const traces = buildTraces(timestamps, series, param.color);
+  const ceiling = param.sunCeiling ? sunSeries(state.mode) : null;
+  if (ceiling) {
+    traces.splice(2, 0, ceilingTrace(timestamps, ceiling, t("chart.sunshine.max")));
+  }
   let secondaryUnit = null;
   (param.overlays || []).forEach((overlay) => {
     const overlaySeries = block.parameters[overlay.key];
@@ -1216,7 +1249,8 @@ function renderChart(param, block, series) {
     }
   }
   if (param.annotations.pinToTop) {
-    yRange = computeYRange(param, series, [], 0.3);
+    const ceilingExtent = ceiling ? seriesExtent(ceiling) : null;
+    yRange = computeYRange(param, series, [], 0.3, ceilingExtent ? ceilingExtent[1] : null);
   } else if (points.length) {
     yRange = computeYRange(param, series, points);
   }
@@ -1296,7 +1330,7 @@ function renderChart(param, block, series) {
       showgrid: false,
       rangemode: "tozero",
       range: [0, 100],
-      color: "#94a3b8",
+      color: "#64748b",
       title: { text: secondaryUnit },
     };
   } else if (hasDirection) {
