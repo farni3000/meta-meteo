@@ -8,10 +8,13 @@ const CHARTS = [
     infoKey: "chart.temperature.info",
     color: "#f97316",
     zero: false,
-    overlays: [
-      { key: "apparent_temperature", labelKey: "chart.temperature.overlay", color: "#fca5a5" },
-    ],
+    // Feels-like temperature is temporarily disabled on purpose; keep for later.
+    // overlays: [
+    //   { key: "apparent_temperature", labelKey: "chart.temperature.overlay", color: "#fca5a5" },
+    // ],
     annotations: { type: "max", dynamicArrow: true },
+    dailyExtremes: true,
+    dailyAnnotations: { min: true, max: true },
   },
   {
     key: "sunshine_duration",
@@ -24,6 +27,7 @@ const CHARTS = [
       { key: "cloud_cover", labelKey: "chart.sunshine.overlay", color: "#60a5fa", secondary: true },
     ],
     annotations: { type: "sum", pinToTop: true },
+    dailyAnnotations: { min: true, max: true, sum: true, pinSum: true },
   },
   {
     key: "wind_speed_10m",
@@ -33,6 +37,7 @@ const CHARTS = [
     zero: true,
     direction: { key: "wind_direction_10m", labelKey: "chart.wind.direction" },
     annotations: { type: "max", dynamicArrow: true },
+    dailyAnnotations: { max: true },
   },
   {
     key: "precipitation_probability",
@@ -41,6 +46,7 @@ const CHARTS = [
     color: "#818cf8",
     zero: true,
     annotations: { type: "max", dynamicArrow: true },
+    dailyAnnotations: { max: true },
   },
   {
     key: "precipitation",
@@ -49,6 +55,7 @@ const CHARTS = [
     color: "#4ade80",
     zero: true,
     annotations: { type: "sum" },
+    dailyAnnotations: { max: true, sum: true, pinSum: true },
   },
   {
     key: "uv_index",
@@ -57,6 +64,7 @@ const CHARTS = [
     color: "#ec4899",
     zero: true,
     annotations: { type: "max", dynamicArrow: true },
+    dailyAnnotations: { max: true },
   },
   {
     key: "pressure_msl",
@@ -65,6 +73,7 @@ const CHARTS = [
     color: "#c084fc",
     zero: false,
     annotations: { type: "max", dynamicArrow: true },
+    dailyAnnotations: { min: true, max: true },
     bands: [
       { from: 900, to: 1000, labelKey: "band.low", color: "#60a5fa" },
       { from: 1000, to: 1013, labelKey: "band.slightlyBelow", color: "#22d3ee" },
@@ -697,17 +706,180 @@ function dailyHighlights(param, context) {
   return highlights;
 }
 
+const TEMP_MAX_COLOR = "#f87171";
+const TEMP_MIN_COLOR = "#60a5fa";
+
+function computeAnnotationPoints(param, config, context) {
+  if (!config) return [];
+  if (context && context.mode === "daily") {
+    return rangeHighlights(param, config, context);
+  }
+  return dailyHighlights(param, context);
+}
+
+function dailyGroupedExtremes(param) {
+  const daily = state.data && state.data.daily;
+  const hourly = state.data && state.data.hourly;
+  const source = hourly && hourly.parameters && hourly.parameters[param.key];
+  if (!daily || !daily.timestamps || !source || !source.mean) return null;
+  const days = new Map();
+  hourly.timestamps.forEach((timestamp, index) => {
+    const value = source.mean[index];
+    if (value === null || value === undefined || !isFinite(value)) return;
+    const day = timestamp.slice(0, 10);
+    const entry = days.get(day);
+    if (!entry) {
+      days.set(day, { max: value, min: value });
+      return;
+    }
+    if (value > entry.max) entry.max = value;
+    if (value < entry.min) entry.min = value;
+  });
+  let hasValue = false;
+  const max = daily.timestamps.map((timestamp) => {
+    const entry = days.get(timestamp.slice(0, 10));
+    if (entry) hasValue = true;
+    return entry ? entry.max : null;
+  });
+  const min = daily.timestamps.map((timestamp) => {
+    const entry = days.get(timestamp.slice(0, 10));
+    return entry ? entry.min : null;
+  });
+  return hasValue ? { max, min } : null;
+}
+
+function dailyExtremesTraces(x, extremes, unit) {
+  const customdata = (values) =>
+    values.map((value, index) => [
+      value === null || value === undefined ? "–" : formatValue(value, unit),
+      hoverXLabel(x[index]),
+    ]);
+  return [
+    {
+      x,
+      y: extremes.max,
+      customdata: customdata(extremes.max),
+      type: "scatter",
+      mode: "lines",
+      line: { color: TEMP_MAX_COLOR, width: 1.5, dash: "dot" },
+      name: t("chart.temperature.maxLine"),
+      hovertemplate: t("chart.hoverCeilingTemplate", {
+        label: t("chart.temperature.maxLine"),
+      }),
+    },
+    {
+      x,
+      y: extremes.min,
+      customdata: customdata(extremes.min),
+      type: "scatter",
+      mode: "lines",
+      line: { color: TEMP_MIN_COLOR, width: 1.5 },
+      name: t("chart.temperature.minLine"),
+      hovertemplate: t("chart.hoverCeilingTemplate", {
+        label: t("chart.temperature.minLine"),
+      }),
+    },
+  ];
+}
+
+function rangeHighlights(param, config, context) {
+  const block = state.data && state.data.daily;
+  const series = block && block.parameters && block.parameters[param.key];
+  if (!series || !series.mean || !series.mean.length) return [];
+  const timestamps = block.timestamps;
+  const unit = series.unit || "";
+  const range = context && context.range;
+  const extremes = param.dailyExtremes ? dailyGroupedExtremes(param) : null;
+  const visible = [];
+  timestamps.forEach((timestamp, index) => {
+    if (inVisibleRange(timestamp, range)) visible.push(index);
+  });
+  if (!visible.length) return [];
+  const highlights = [];
+  const pick = (values, findMax) => {
+    let best = null;
+    visible.forEach((index) => {
+      const value = values[index];
+      if (value === null || value === undefined || !isFinite(value)) return;
+      if (!best || (findMax ? value > best.value : value < best.value)) {
+        best = { index, value };
+      }
+    });
+    return best;
+  };
+  if (config.max) {
+    const values = (extremes && extremes.max) || series.mean;
+    const best = pick(values, true);
+    if (best && Math.round(best.value * 10) !== 0) {
+      const timestamp = timestamps[best.index];
+      highlights.push({
+        day: timestamp.slice(0, 10),
+        x: timestamp,
+        value: best.value,
+        text: formatValue(best.value, unit),
+        direction: "up",
+      });
+    }
+  }
+  if (config.min) {
+    const values = (extremes && extremes.min) || series.mean;
+    const best = pick(values, false);
+    if (best) {
+      const timestamp = timestamps[best.index];
+      highlights.push({
+        day: timestamp.slice(0, 10),
+        x: timestamp,
+        value: best.value,
+        text: formatValue(best.value, unit),
+        direction: "down",
+      });
+    }
+  }
+  if (config.sum) {
+    let total = 0;
+    let count = 0;
+    visible.forEach((index) => {
+      const value = series.mean[index];
+      if (value === null || value === undefined || !isFinite(value)) return;
+      total += value;
+      count += 1;
+    });
+    if (count) {
+      const timestamp = timestamps[visible[Math.floor(visible.length / 2)]];
+      highlights.push({
+        day: timestamp.slice(0, 10),
+        x: timestamp,
+        value: total,
+        text: formatValue(total, unit),
+        direction: "pin",
+        pinToTop: !!config.pinSum,
+      });
+    }
+  }
+  return highlights;
+}
+
 function computeYRange(
   param,
   series,
   points,
   topFactor = 0.22,
   extraMax = null,
-  cap = null
+  cap = null,
+  extraExtent = null,
+  bottomFactor = 0.1
 ) {
   const extent = seriesExtent(series, cap) || [0, 0];
   let min = extent[0];
   let max = extent[1];
+  if (extraExtent) {
+    if (extraExtent[0] !== null && extraExtent[0] !== undefined) {
+      min = Math.min(min, extraExtent[0]);
+    }
+    if (extraExtent[1] !== null && extraExtent[1] !== undefined) {
+      max = Math.max(max, extraExtent[1]);
+    }
+  }
   if (extraMax !== null && extraMax !== undefined) max = Math.max(max, extraMax);
   points.forEach((point) => {
     if (point.value === null || point.value === undefined) return;
@@ -717,7 +889,7 @@ function computeYRange(
   const span = max - min || Math.abs(max) || 1;
   const top = max + span * topFactor;
   if (param.zero) return [0, top];
-  return [min - span * 0.1, top];
+  return [min - span * bottomFactor, top];
 }
 
 function chartXContext(range, timestamps) {
@@ -746,22 +918,26 @@ function arrowOffset(x, ctx, baseAy) {
   return { ax: -(centered / 0.5) * maxAx, ay: baseAy };
 }
 
-function resolveArrow(param, x, ctx, baseAy) {
-  if (param.annotations.dynamicArrow) return arrowOffset(x, ctx, baseAy);
+function resolveArrow(config, x, ctx, baseAy) {
+  if (config && config.dynamicArrow) return arrowOffset(x, ctx, baseAy);
   return { ax: 0, ay: baseAy };
 }
 
-function valueAnnotations(param, points, ctx) {
-  const centered = param.annotations.type === "sum";
-  const pinToTop = !!param.annotations.pinToTop;
+function valueAnnotations(param, points, ctx, config) {
+  const active = config || {};
   return points.map((point) => {
-    const arrow = centered ? { ax: 0, ay: 0 } : resolveArrow(param, point.x, ctx, -28);
+    const direction = point.direction || (active.type === "sum" ? "pin" : "up");
+    const pinned = direction === "pin";
+    const pinToTop =
+      pinned && !!(point.pinToTop !== undefined ? point.pinToTop : active.pinToTop);
+    const baseAy = direction === "down" ? 28 : -28;
+    const arrow = pinned ? { ax: 0, ay: 0 } : resolveArrow(active, point.x, ctx, baseAy);
     const annotation = {
       x: point.x,
       y: pinToTop ? 0.97 : point.value,
       text: point.text,
       xanchor: "center",
-      showarrow: !centered,
+      showarrow: !pinned,
       arrowhead: 0,
       arrowwidth: 1,
       arrowcolor: hexToRgba(param.color, 0.75),
@@ -773,9 +949,13 @@ function valueAnnotations(param, points, ctx) {
       borderpad: 3,
       font: { size: 10, color: param.color },
     };
-    if (pinToTop) {
-      annotation.yref = "paper";
-      annotation.yanchor = "top";
+    if (pinned) {
+      if (pinToTop) {
+        annotation.yref = "paper";
+        annotation.yanchor = "top";
+      } else {
+        annotation.yanchor = "middle";
+      }
     }
     return annotation;
   });
@@ -797,8 +977,16 @@ function rebuildAnnotations(entry, range) {
   if (entry.param.bands && entry.yRange) {
     annotations.push(...bandAnnotations(entry.param.bands, entry.yRange));
   }
-  if (entry.points.length) {
-    annotations.push(...valueAnnotations(entry.param, entry.points, ctx));
+  if (entry.config) {
+    const context =
+      entry.mode === "daily"
+        ? { mode: entry.mode, range }
+        : { mode: entry.mode, bound: entry.bound, endBound: entry.endBound };
+    const points = computeAnnotationPoints(entry.param, entry.config, context);
+    entry.points = points;
+    if (points.length) {
+      annotations.push(...valueAnnotations(entry.param, points, ctx, entry.config));
+    }
   }
   return annotations;
 }
@@ -1291,9 +1479,38 @@ function renderChart(param, block, series) {
     }
   }
 
-  const points = param.annotations
-    ? dailyHighlights(param, { mode: state.mode, bound, endBound: xRange && xRange[1] })
-    : [];
+  const activeConfig = state.mode === "daily" ? param.dailyAnnotations : param.annotations;
+  const dailyExtremes =
+    state.mode === "daily" && param.dailyExtremes ? dailyGroupedExtremes(param) : null;
+  if (dailyExtremes) {
+    traces.push(...dailyExtremesTraces(timestamps, dailyExtremes, series.unit));
+  }
+  const points = computeAnnotationPoints(param, activeConfig, {
+    mode: state.mode,
+    bound,
+    endBound: xRange && xRange[1],
+    range: xRange,
+  });
+
+  const pointDirection = (point) =>
+    point.direction || (activeConfig && activeConfig.type === "sum" ? "pin" : "up");
+  const pinnedToTop = (point) => {
+    if (pointDirection(point) !== "pin") return false;
+    return !!(point.pinToTop !== undefined
+      ? point.pinToTop
+      : activeConfig && activeConfig.pinToTop);
+  };
+  const rangePoints = points.filter((point) => !pinnedToTop(point));
+  const hasMinPoint = rangePoints.some((point) => point.direction === "down");
+  const extraExtent = (() => {
+    if (!dailyExtremes) return null;
+    const values = [...dailyExtremes.max, ...dailyExtremes.min].filter(
+      (value) => value !== null && value !== undefined && isFinite(value)
+    );
+    if (!values.length) return null;
+    return [Math.min(...values), Math.max(...values)];
+  })();
+  const pinToTop = points.some(pinnedToTop) || !!(activeConfig && activeConfig.pinToTop);
 
   let yRange = null;
   if (param.bands) {
@@ -1303,18 +1520,29 @@ function renderChart(param, block, series) {
       yRange = [extent[0] - pad, extent[1] + pad];
     }
   }
-  if (param.annotations.pinToTop) {
+  if (pinToTop) {
     const ceilingExtent = ceiling ? seriesExtent(ceiling) : null;
     yRange = computeYRange(
       param,
       series,
-      [],
+      rangePoints,
       0.3,
       ceilingExtent ? ceilingExtent[1] : null,
-      capSeries ? capSeries.mean : null
+      capSeries ? capSeries.mean : null,
+      extraExtent,
+      hasMinPoint ? 0.22 : 0.1
     );
-  } else if (points.length) {
-    yRange = computeYRange(param, series, points);
+  } else if (rangePoints.length || extraExtent) {
+    yRange = computeYRange(
+      param,
+      series,
+      rangePoints,
+      0.22,
+      null,
+      null,
+      extraExtent,
+      hasMinPoint ? 0.22 : 0.1
+    );
   }
 
   const shapes = dayShapes(timestamps, state.mode);
@@ -1359,7 +1587,7 @@ function renderChart(param, block, series) {
     }
   } else if (state.mode === "daily") {
     layout.xaxis.tickmode = "array";
-    layout.xaxis.tickvals = timestamps;
+    layout.xaxis.tickvals = timestamps.map((timestamp) => `${timestamp.slice(0, 10)}T12:00`);
     layout.xaxis.ticktext = timestamps.map(weekdayName);
   } else {
     layout.xaxis.nticks = 7;
@@ -1377,7 +1605,7 @@ function renderChart(param, block, series) {
     annotations.push(...bandAnnotations(param.bands, yRange));
   }
   if (points.length) {
-    annotations.push(...valueAnnotations(param, points, xCtx));
+    annotations.push(...valueAnnotations(param, points, xCtx, activeConfig));
   }
   if (annotations.length) {
     layout.annotations = annotations;
@@ -1425,6 +1653,10 @@ function renderChart(param, block, series) {
       range: defaultRange,
       defaultRange,
       param,
+      config: activeConfig,
+      mode: state.mode,
+      bound,
+      endBound: xRange && xRange[1],
       points,
       yRange,
       timestamps,
@@ -1448,7 +1680,7 @@ function renderChart(param, block, series) {
       if (state.mode === "hourly") {
         Object.assign(update, hourlyTickLayout(target));
       }
-      if (param.annotations && param.annotations.dynamicArrow && points.length) {
+      if (activeConfig) {
         update.annotations = rebuildAnnotations(entry, target);
       }
       if (Object.keys(update).length) {

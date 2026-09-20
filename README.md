@@ -49,24 +49,30 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   from now (zoom out for all 7 days). A trailing calendar day is only included
   if at least 3 hours of it fall inside the window, otherwise the window ends at
   its midnight.
-- Daily highlights directly in the chart: temperature, wind, UV index,
-  precipitation probability and air pressure show the daily maximum per day,
-  precipitation amount and sunshine hours the daily total. The values are always
-  computed from the hourly series (`max` or `sum` per calendar day) so that they
-  are also correct in the daily view. Max charts use a grey box (`#222e40`) with
-  a coloured border, coloured value and a dynamic connector line without an
-  arrowhead – the further the daily peak lies towards the outside, the flatter
-  the line points to the opposite side (max. 45°, `standoff` keeps distance to
-  the point); the box is painted over the line's start and recalculated on
-  zoom/pan/reset. The sum box for precipitation amount sits centred in the day
-  without a line; the one for sunshine hours additionally floats at the top edge
-  of the chart (`pinToTop`) with some headroom so that the y-axis scales to the
-  hourly series and the maximum-sunshine line but the value does not collide
-  with the curve. From the partial (first) day, only the remaining hours appear
-  in hourly mode and only if more than three hours are left; the value and
-  position then refer to the visible remainder. In daily mode the full day is
-  used. Highlights that round to `0.0` are omitted; configuration is via the
-  `annotations` field in the respective `CHARTS` entry.
+- Highlights directly in the chart. In the hourly view, temperature, wind, UV
+  index, precipitation probability and air pressure show the daily maximum per
+  day, precipitation amount and sunshine hours the daily total; the values are
+  computed from the hourly series (`max`/`sum` per calendar day). Max charts use
+  a grey box (`#222e40`) with a coloured border, coloured value and a dynamic
+  connector line without an arrowhead (the further the peak lies towards the
+  outside, the flatter the line points to the opposite side, max. 45°); the sum
+  box sits centred in the day without a line, and for sunshine hours it is
+  additionally pinned to the top edge (`pinToTop`) with headroom so that it does
+  not collide with the curve. From the partial (first) day only the remaining
+  hours appear, and only if more than three hours are left; the value and
+  position then refer to the visible remainder. The boxes are painted over the
+  line's start and recalculated on zoom/pan/reset.
+- Daily view highlights instead refer to the visible period rather than to
+  individual days: the highest and lowest value (temperature, sunshine hours,
+  air pressure), the highest value (wind, UV index, precipitation probability,
+  precipitation amount) and, for precipitation amount and sunshine hours, the
+  period total pinned to the top edge. They therefore follow the daily curve and
+  re-scale when zooming. The temperature chart additionally draws the daily
+  maximum (dotted) and daily minimum (blue) per day, derived from the hourly
+  series (the feels-like overlay is currently commented out). Highlights that
+  round to `0.0` are omitted. Configuration is via `annotations` (hourly) and
+  `dailyAnnotations` (daily) in the respective `CHARTS` entry; daily x labels are
+  centred on the day.
 - Consistent number notation: all values in hover tooltips and chart annotations
   are output with one decimal place and a unit (e.g. `23.4 °C`, `3.2 mm`).
   Formatting is centralised via `formatNumber`/`formatValue` with the
@@ -394,11 +400,13 @@ caching are generic and need no adjustment. For angle quantities set
 `circular=True` so that the vector mean is used instead of the arithmetic mean.
 If the quantity should appear as arrows in an existing chart, add
 `direction: { key, label }` to the frontend entry instead of creating a separate
-chart. For a daily highlight in the chart set
-`annotations: { type: "max" | "sum" }`. `max` shows the daily maximum at the
-position of the peak with a connector line without an arrowhead (optional
-`dynamicArrow: true` for x-dependent tilting, max. 45°, recalculation on
-zoom/pan/reset); `sum` the daily total without a line, centred in the day.
+chart. For hourly highlights set `annotations: { type: "max" | "sum" }`: `max`
+shows the daily maximum at the position of the peak with a connector line
+without an arrowhead (optional `dynamicArrow: true` for x-dependent tilting,
+max. 45°, recalculation on zoom/pan/reset); `sum` the daily total without a line,
+centred in the day. For the daily view set `dailyAnnotations:
+{ min, max, sum, pinSum }` (range highlights over the visible period) and
+optionally `dailyExtremes: true` to draw the per-day maximum/minimum lines.
 
 ## Known limitation: UV index
 

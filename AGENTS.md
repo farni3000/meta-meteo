@@ -125,9 +125,9 @@ as an error band.
   `wallClockMs`/`isoLocal`. On zoom/pan, reset in the `plotly_relayout` handler
   via `hourlyTickLayout()` (together with the annotations in one
   `Plotly.relayout`). Daily mode: `tickmode: "array"` with all block timestamps
-  as `tickvals` and `ticktext` from `weekdayName()` so that no day is omitted.
-  Weekdays always come from `I18n.weekdays()` (not from the Plotly locale, which
-  is not reliable here).
+  centred in the day (`<day>T12:00`) as `tickvals` and `ticktext` from
+  `weekdayName()` so that no day is omitted. Weekdays always come from
+  `I18n.weekdays()` (not from the Plotly locale, which is not reliable here).
 - **Hover tooltips:** instead of `%{x}`/`hoverformat`, the x label is computed via
   `hoverXLabel()` in `frontend/app.js` and passed as the **last** `customdata`
   element: hourly `weekdayName + " HH:MM"` (e.g. `Thu 14:00`), daily only
@@ -146,26 +146,29 @@ as an error band.
   per parameter" list is a collapsed-by-default `<details>` panel; the model list
   in it links via `MODEL_DOCS` to the Open-Meteo docs page of the respective
   provider (link title `models.docsLinkTitle`, note `models.docsNote`).
-- **Daily highlights in the chart:** via an `annotations` field on the `CHARTS`
-  entry (`{ type: "max" | "sum" }`). `dailyHighlights` always aggregates the
-  **hourly series** from `state.data.hourly` per calendar day (daily maximum or
-  daily total) so that the values are also correct in the daily view
-  (`temperature_2m`/`pressure_msl` are only available daily as `_mean`). `max`
-  renders as a grey box with a coloured connector line without an arrowhead at
-  the peak (`arrowhead: 0`), `sum` as a box without a line centred in the day;
-  `pinToTop: true` (sunshine hours) places it via `yref: "paper"` at the top edge
-  of the chart and scales the y-axis with increased headroom
-  (`computeYRange`, top factor 0.3) so that the value does not collide with the
-  hourly curve. From the partial first day, only the visible remainder from `now`
-  counts in hourly mode – and only if more than 3 h are left; in daily mode the
-  full day counts. Highlights that round to `0.0` are omitted. `computeYRange`
-  makes room for the labels. The daily x-axis extends to `nextDayString` of the
-  last day so that the labels of the last day are not cut off.
+- **Highlights in the chart:** mode-dependent. Hourly via the `annotations` field
+  on the `CHARTS` entry (`{ type: "max" | "sum" }`); `dailyHighlights` aggregates
+  the **hourly series** from `state.data.hourly` per calendar day (daily maximum
+  or daily total). Daily via `dailyAnnotations` (`{ min, max, sum, pinSum }`), and
+  optionally `dailyExtremes: true` (temperature) to draw the per-day
+  maximum/minimum lines; `rangeHighlights` computes the highlights over the
+  **visible daily range** instead of per day, so the boxes follow the daily curve
+  and re-scale on zoom. `max`/`min` render as grey boxes with a coloured
+  connector line without an arrowhead (`arrowhead: 0`, `min` below the point);
+  `sum` as a box without a line; `pinToTop`/`pinSum` place it via
+  `yref: "paper"` at the top edge. `computeYRange` scales the y-axis with extra
+  headroom (`topFactor` 0.3 pinned, 0.22 otherwise), includes the draw
+  `extraExtent` (temperature max/min lines) and the min boxes. From the partial
+  first day, only the visible remainder from `now` counts in hourly mode – and
+  only if more than 3 h are left. Highlights that round to `0.0` are omitted. The
+  daily x-axis extends to `nextDayString` of the last day so that the labels of
+  the last day are not cut off.
 - **Dynamic connector lines:** `dynamicArrow: true` on the `annotations` entry
   lets `resolveArrow`/`arrowOffset` tilt the headless line depending on x (point
   outside → label towards the centre, max. 45°, `standoff` keeps distance to the
-  point). Active for the max charts, not for `sum`. `chartXContext` provides the
-  visible x span; `rebuildAnnotations` is rebuilt on zoom/pan/reset via the
+  point). Active for the hourly max charts. `chartXContext` provides the visible
+  x span; in daily mode `rebuildAnnotations` recomputes the points from the new
+  range (and stores them in `entry.points` for the smalltalk button) via the
   `plotly_relayout` handler. `paintAnnotationsUnderBoxes` reorders the SVG via
   `plotly_afterplot` so that the box lies over the start of the line.
 
