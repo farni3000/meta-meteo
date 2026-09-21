@@ -766,7 +766,7 @@ function dailyGroupedExtremes(param) {
   };
 }
 
-function dailyBandTraces(x, values, stds, color) {
+function dailyBandTraces(x, values, stds, color, name) {
   const lower = values.map((value, index) => {
     const std = stds[index];
     if (value === null || value === undefined || std === null || std === undefined) return null;
@@ -796,7 +796,9 @@ function dailyBandTraces(x, values, stds, color) {
       fill: "tonexty",
       fillcolor: bandColor(color),
       hoverinfo: "skip",
-      showlegend: false,
+      name,
+      legendgroup: name,
+      showlegend: !!name,
     },
   ];
 }
@@ -818,9 +820,21 @@ function dailyExtremesTraces(x, extremes, unit) {
     hovertemplate: t("chart.hoverCeilingTemplate", { label: t(labelKey) }),
   });
   return [
-    ...dailyBandTraces(x, extremes.max, extremes.maxStd, TEMP_MAX_COLOR),
+    ...dailyBandTraces(
+      x,
+      extremes.max,
+      extremes.maxStd,
+      TEMP_MAX_COLOR,
+      t("chart.legendStdMax")
+    ),
     line(extremes.max, TEMP_MAX_COLOR, "chart.temperature.maxLine"),
-    ...dailyBandTraces(x, extremes.min, extremes.minStd, TEMP_MIN_COLOR),
+    ...dailyBandTraces(
+      x,
+      extremes.min,
+      extremes.minStd,
+      TEMP_MIN_COLOR,
+      t("chart.legendStdMin")
+    ),
     line(extremes.min, TEMP_MIN_COLOR, "chart.temperature.minLine"),
   ];
 }
