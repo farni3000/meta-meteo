@@ -24,7 +24,13 @@ const CHARTS = [
     zero: true,
     sunCeiling: true,
     overlays: [
-      { key: "cloud_cover", labelKey: "chart.sunshine.overlay", color: "#60a5fa", secondary: true },
+      {
+        key: "cloud_cover",
+        labelKey: "chart.sunshine.overlay",
+        color: "#60a5fa",
+        secondary: true,
+        axisMax: 100,
+      },
     ],
     annotations: { type: "sum", pinToTop: true },
     dailyAnnotations: { min: true, max: true, sum: true, pinSum: true },
@@ -41,21 +47,26 @@ const CHARTS = [
   },
   {
     key: "precipitation_probability",
+    titleKey: "chart.precip.title",
     labelKey: "chart.precipProb.label",
-    infoKey: "chart.precipProb.info",
+    meanLabelKey: "chart.precipProb.label",
+    infoKey: "chart.precip.info",
     color: "#818cf8",
     zero: true,
+    reserveTop: true,
     annotations: { type: "max", dynamicArrow: true },
     dailyAnnotations: { max: true },
-  },
-  {
-    key: "precipitation",
-    labelKey: "chart.precip.label",
-    infoKey: "chart.precip.info",
-    color: "#4ade80",
-    zero: true,
-    annotations: { type: "sum" },
-    dailyAnnotations: { max: true, sum: true, pinSum: true },
+    overlays: [
+      {
+        key: "precipitation",
+        labelKey: "chart.precip.label",
+        color: "#4ade80",
+        secondary: true,
+        bars: true,
+        annotations: { type: "sum", pinToTop: true },
+        dailyAnnotations: { max: true, sum: true, pinSum: true },
+      },
+    ],
   },
   {
     key: "uv_index",
@@ -91,8 +102,8 @@ function buildPanelParams() {
       params.push({
         key: overlay.key,
         labelKey: overlay.labelKey,
-        noteKey: "panel.noteDashed",
-        chartLabelKey: chart.labelKey,
+        noteKey: overlay.bars ? "panel.noteBars" : "panel.noteDashed",
+        chartLabelKey: chart.titleKey || chart.labelKey,
       });
     });
     if (chart.direction) {
@@ -986,7 +997,7 @@ function resolveArrow(config, x, ctx, baseAy) {
   return { ax: 0, ay: baseAy };
 }
 
-function valueAnnotations(param, points, ctx, config) {
+function valueAnnotations(param, points, ctx, config, yref = "y") {
   const active = config || {};
   return points.map((point) => {
     const direction = point.direction || (active.type === "sum" ? "pin" : "up");
@@ -1018,8 +1029,11 @@ function valueAnnotations(param, points, ctx, config) {
         annotation.yref = "paper";
         annotation.yanchor = "top";
       } else {
+        annotation.yref = yref;
         annotation.yanchor = "middle";
       }
+    } else {
+      annotation.yref = yref;
     }
     return annotation;
   });
@@ -1035,27 +1049,54 @@ function paintAnnotationsUnderBoxes(plot) {
   });
 }
 
+function annotationContext(entry, range) {
+  return entry.mode === "daily"
+    ? { mode: entry.mode, range }
+    : { mode: entry.mode, bound: entry.bound, endBound: entry.endBound };
+}
+
+function annotationOverlayConfig(overlay, mode) {
+  return mode === "daily" ? overlay.dailyAnnotations : overlay.annotations;
+}
+
+function buildAnnotationSet(param, config, context, ctx, yref) {
+  if (!config) return { points: [], annotations: [] };
+  const points = computeAnnotationPoints(param, config, context);
+  const annotations = points.length
+    ? valueAnnotations(param, points, ctx, config, yref)
+    : [];
+  return { points, annotations };
+}
+
 function rebuildAnnotations(entry, range) {
   const ctx = chartXContext(range, entry.timestamps);
+  const context = annotationContext(entry, range);
   const annotations = [];
   if (entry.param.bands && entry.yRange) {
     annotations.push(...bandAnnotations(entry.param.bands, entry.yRange));
   }
-  if (entry.config) {
-    const context =
-      entry.mode === "daily"
-        ? { mode: entry.mode, range }
-        : { mode: entry.mode, bound: entry.bound, endBound: entry.endBound };
-    const points = computeAnnotationPoints(entry.param, entry.config, context);
-    entry.points = points;
-    if (points.length) {
-      annotations.push(...valueAnnotations(entry.param, points, ctx, entry.config));
-    }
-  }
+  const primary = buildAnnotationSet(entry.param, entry.config, context, ctx, "y");
+  entry.points = primary.points;
+  annotations.push(...primary.annotations);
+  (entry.annotationOverlays || []).forEach((overlayEntry) => {
+    const set = buildAnnotationSet(
+      overlayEntry.overlay,
+      overlayEntry.config,
+      context,
+      ctx,
+      overlayEntry.yref
+    );
+    overlayEntry.points = set.points;
+    annotations.push(...set.annotations);
+  });
   return annotations;
 }
 
-function buildTraces(x, series, color, cap = null) {
+function buildTraces(x, series, color, cap = null, options = {}) {
+  const yaxis = options.yaxis || "y";
+  const name = options.nameKey ? t(options.nameKey) : t("chart.legendMean");
+  const hoverTemplate = options.hoverTemplate || t("chart.hoverMeanTemplate");
+  const bandName = options.bandKey ? t(options.bandKey) : t("chart.legendStd");
   const capAt = (index) =>
     cap && cap[index] !== null && cap[index] !== undefined ? cap[index] : null;
   const lower = series.mean.map((value, index) => {
@@ -1086,6 +1127,7 @@ function buildTraces(x, series, color, cap = null) {
       line: { width: 0 },
       hoverinfo: "skip",
       showlegend: false,
+      yaxis,
     },
     {
       x,
@@ -1096,7 +1138,8 @@ function buildTraces(x, series, color, cap = null) {
       fill: "tonexty",
       fillcolor: bandColor(color),
       hoverinfo: "skip",
-      name: t("chart.legendStd"),
+      name: bandName,
+      yaxis,
     },
     {
       x,
@@ -1105,10 +1148,31 @@ function buildTraces(x, series, color, cap = null) {
       type: "scatter",
       mode: "lines",
       line: { color, width: 2.5 },
-      name: t("chart.legendMean"),
-      hovertemplate: t("chart.hoverMeanTemplate"),
+      name,
+      yaxis,
+      hovertemplate: hoverTemplate,
     },
   ];
+}
+
+function overlayBars(x, series, overlay) {
+  const unit = series.unit || "";
+  const counts = series.model_count || [];
+  const customdata = series.mean.map((value, index) => [
+    value === null || value === undefined ? "–" : formatValue(value, unit),
+    counts[index] || 0,
+    hoverXLabel(x[index]),
+  ]);
+  return {
+    x,
+    y: series.mean,
+    customdata,
+    type: "bar",
+    yaxis: "y2",
+    marker: { color: overlay.color },
+    name: t(overlay.labelKey),
+    hovertemplate: t("chart.hoverOverlayTemplate", { label: t(overlay.labelKey) }),
+  };
 }
 
 function overlayTrace(x, series, overlay) {
@@ -1382,6 +1446,15 @@ function collectSmalltalkMetrics() {
         kind: "highlight",
       });
     });
+    (entry.annotationOverlays || []).forEach((overlayEntry) => {
+      (overlayEntry.points || []).forEach((point) => {
+        metrics.push({
+          label: `${t(overlayEntry.overlay.labelKey)} (${weekdayName(point.day)})`,
+          value: point.text,
+          kind: "highlight",
+        });
+      });
+    });
   });
   return metrics;
 }
@@ -1463,7 +1536,7 @@ function renderChart(param, block, series) {
   head.className = "chart-head";
   const title = document.createElement("span");
   title.className = "chart-title";
-  title.textContent = t(param.labelKey);
+  title.textContent = t(param.titleKey || param.labelKey);
   head.appendChild(title);
   if (param.infoKey) {
     const info = document.createElement("span");
@@ -1519,21 +1592,43 @@ function renderChart(param, block, series) {
     state.mode === "daily" && param.dailyExtremes ? dailyGroupedExtremes(param) : null;
 
   const capSeries = param.sunCeiling ? sunCapSeries(state.mode) : null;
+  const primaryHover = param.meanLabelKey
+    ? t("chart.hoverOverlayTemplate", { label: t(param.meanLabelKey) })
+    : null;
   const traces = dailyExtremes
     ? dailyExtremesTraces(xTimestamps, dailyExtremes, series.unit)
-    : buildTraces(xTimestamps, series, param.color, capSeries ? capSeries.mean : null);
+    : buildTraces(xTimestamps, series, param.color, capSeries ? capSeries.mean : null, {
+        yaxis: "y",
+        nameKey: param.meanLabelKey,
+        hoverTemplate: primaryHover,
+      });
   const ceiling = param.sunCeiling ? sunLineSeries(state.mode) : null;
   if (ceiling) {
     const rawCeilingX = ceiling.timestamps || timestamps;
     const ceilingX = state.mode === "daily" ? rawCeilingX.map(dailyPlotTimestamp) : rawCeilingX;
     traces.splice(2, 0, ceilingTrace(ceilingX, ceiling, t("chart.sunshine.max")));
   }
-  let secondaryUnit = null;
+  let secondaryOverlay = null;
+  const annotationOverlays = [];
   (param.overlays || []).forEach((overlay) => {
     const overlaySeries = block.parameters[overlay.key];
     if (!overlaySeries || overlaySeries.models_used.length === 0) return;
-    traces.push(overlayTrace(xTimestamps, overlaySeries, overlay));
-    if (overlay.secondary) secondaryUnit = overlaySeries.unit || "";
+    if (overlay.bars) {
+      traces.unshift(overlayBars(xTimestamps, overlaySeries, overlay));
+    } else {
+      traces.push(overlayTrace(xTimestamps, overlaySeries, overlay));
+    }
+    if (overlay.secondary) secondaryOverlay = { overlay, series: overlaySeries };
+    const config = annotationOverlayConfig(overlay, state.mode);
+    if (config) {
+      annotationOverlays.push({
+        overlay,
+        config,
+        yref: overlay.secondary ? "y2" : "y",
+        points: [],
+        annotations: [],
+      });
+    }
   });
 
   let hasDirection = false;
@@ -1546,23 +1641,41 @@ function renderChart(param, block, series) {
     }
   }
 
-  const points = computeAnnotationPoints(param, activeConfig, {
+  const xCtx = chartXContext(xRange, xTimestamps);
+  const context = {
     mode: state.mode,
     bound,
     endBound: xRange && xRange[1],
     range: xRange,
+  };
+  const primarySet = buildAnnotationSet(param, activeConfig, context, xCtx, "y");
+  const points = primarySet.points;
+  annotationOverlays.forEach((overlayEntry) => {
+    const set = buildAnnotationSet(
+      overlayEntry.overlay,
+      overlayEntry.config,
+      context,
+      xCtx,
+      overlayEntry.yref
+    );
+    overlayEntry.points = set.points;
+    overlayEntry.annotations = set.annotations;
   });
 
-  const pointDirection = (point) =>
-    point.direction || (activeConfig && activeConfig.type === "sum" ? "pin" : "up");
-  const pinnedToTop = (point) => {
-    if (pointDirection(point) !== "pin") return false;
-    return !!(point.pinToTop !== undefined
-      ? point.pinToTop
-      : activeConfig && activeConfig.pinToTop);
+  const pointDirection = (point, config) =>
+    point.direction || (config && config.type === "sum" ? "pin" : "up");
+  const pinnedToTop = (point, config) => {
+    if (pointDirection(point, config) !== "pin") return false;
+    return !!(point.pinToTop !== undefined ? point.pinToTop : config && config.pinToTop);
   };
-  const rangePoints = points.filter((point) => !pinnedToTop(point));
+  const rangePoints = points.filter((point) => !pinnedToTop(point, activeConfig));
   const hasMinPoint = rangePoints.some((point) => point.direction === "down");
+  const primaryPinnedTop =
+    points.some((point) => pinnedToTop(point, activeConfig)) ||
+    !!(activeConfig && activeConfig.pinToTop);
+  const overlayPinnedTop = annotationOverlays.some((overlayEntry) =>
+    overlayEntry.points.some((point) => pinnedToTop(point, overlayEntry.config))
+  );
   const extraExtent = (() => {
     if (!dailyExtremes) return null;
     const shifted = (values, stds, sign) =>
@@ -1581,8 +1694,6 @@ function renderChart(param, block, series) {
     if (!values.length) return null;
     return [Math.min(...values), Math.max(...values)];
   })();
-  const pinToTop = points.some(pinnedToTop) || !!(activeConfig && activeConfig.pinToTop);
-
   let yRange = null;
   if (param.bands) {
     const extent = seriesExtent(series);
@@ -1591,7 +1702,7 @@ function renderChart(param, block, series) {
       yRange = [extent[0] - pad, extent[1] + pad];
     }
   }
-  if (pinToTop) {
+  if (primaryPinnedTop) {
     const ceilingExtent = ceiling ? seriesExtent(ceiling) : null;
     yRange = computeYRange(
       param,
@@ -1616,6 +1727,21 @@ function renderChart(param, block, series) {
     );
   }
 
+  let y2Range = null;
+  if (secondaryOverlay && secondaryOverlay.overlay.axisMax === undefined) {
+    const overlayEntry = annotationOverlays.find(
+      (item) => item.overlay === secondaryOverlay.overlay
+    );
+    const overlayRangePoints = overlayEntry
+      ? overlayEntry.points.filter((point) => !pinnedToTop(point, overlayEntry.config))
+      : [];
+    y2Range = computeYRange(
+      { zero: true },
+      secondaryOverlay.series,
+      overlayRangePoints
+    );
+  }
+
   const shapes = dayShapes(timestamps, state.mode);
   if (param.bands) {
     shapes.push(...bandShapes(param.bands));
@@ -1628,7 +1754,7 @@ function renderChart(param, block, series) {
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
     font: { color: "#cbd5e1" },
-    margin: { l: 54, r: secondaryUnit !== null || hasDirection ? 48 : 18, t: 42, b: 46 },
+    margin: { l: 54, r: secondaryOverlay !== null || hasDirection ? 48 : 18, t: 42, b: 46 },
     height: 320,
     showlegend: true,
     legend: { orientation: "h", x: 0.5, xanchor: "center", y: 1.0, yanchor: "bottom" },
@@ -1666,34 +1792,41 @@ function renderChart(param, block, series) {
   }
   if (hasDirection) {
     layout.yaxis.domain = [0, 0.86];
+  } else if (param.reserveTop && (primaryPinnedTop || overlayPinnedTop)) {
+    layout.yaxis.domain = [0, 0.82];
   }
   if (yRange) {
     layout.yaxis.range = yRange;
   }
-  const xCtx = chartXContext(xRange, xTimestamps);
   const annotations = [];
   if (param.bands && yRange) {
     annotations.push(...bandAnnotations(param.bands, yRange));
   }
-  if (points.length) {
-    annotations.push(...valueAnnotations(param, points, xCtx, activeConfig));
-  }
+  annotations.push(...primarySet.annotations);
+  annotationOverlays.forEach((overlayEntry) => {
+    annotations.push(...overlayEntry.annotations);
+  });
   if (annotations.length) {
     layout.annotations = annotations;
   }
   if (xRange) {
     layout.xaxis.range = xRange;
   }
-  if (secondaryUnit !== null) {
+  if (secondaryOverlay !== null) {
     layout.yaxis2 = {
       overlaying: "y",
       side: "right",
       showgrid: false,
       rangemode: "tozero",
-      range: [0, 100],
-      color: "#60a5fa",
-      title: { text: secondaryUnit },
+      color: secondaryOverlay.overlay.color,
+      title: { text: secondaryOverlay.series.unit || "" },
     };
+    const axisMax = secondaryOverlay.overlay.axisMax;
+    if (axisMax !== undefined) {
+      layout.yaxis2.range = [0, axisMax];
+    } else if (y2Range) {
+      layout.yaxis2.range = y2Range;
+    }
   } else if (hasDirection) {
     layout.yaxis2 = {
       anchor: "x",
@@ -1729,6 +1862,7 @@ function renderChart(param, block, series) {
       bound,
       endBound: xRange && xRange[1],
       points,
+      annotationOverlays,
       yRange,
       timestamps,
     };
@@ -1751,7 +1885,7 @@ function renderChart(param, block, series) {
       if (state.mode === "hourly") {
         Object.assign(update, hourlyTickLayout(target));
       }
-      if (activeConfig) {
+      if (activeConfig || entry.annotationOverlays.length) {
         update.annotations = rebuildAnnotations(entry, target);
       }
       if (Object.keys(update).length) {

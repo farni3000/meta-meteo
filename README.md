@@ -39,6 +39,13 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   (1 vs. 2 bins). The ±1σ error band is clamped to the astronomical maximum (and
   to 0), so it never exceeds the physical bound. Its hover shows the label and
   value.
+- Combined precipitation chart ("Precipitation"): precipitation probability as
+  a line on the left axis (%, indigo `#818cf8`, with the usual ±1σ band) and
+  precipitation amount as bars on the right axis (green `#4ade80`). The amount's
+  daily totals are shown as boxes pinned to the top edge; a reserved top band
+  (the plotting area ends at 82 %) keeps them clear of the probability curve, so
+  the two never overlap. The right axis scales dynamically to the amount. In the
+  daily view the wettest day is highlighted as well.
 - Coloured pressure bands in the air-pressure chart: `<1000` low pressure,
   `1000–1013` slightly below average, `1013–1025` normal range, `>1025` high
   pressure – each with a right-aligned label. Because `pressure_msl` is reduced
@@ -56,9 +63,11 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   a grey box (`#222e40`) with a coloured border, coloured value and a dynamic
   connector line without an arrowhead (the further the peak lies towards the
   outside, the flatter the line points to the opposite side, max. 45°); the sum
-  box sits centred in the day without a line, and for sunshine hours it is
-  additionally pinned to the top edge (`pinToTop`) with headroom so that it does
-  not collide with the curve. From the partial (first) day only the remaining
+  box sits centred in the day without a line; the daily totals for sunshine
+  hours and the precipitation amount are additionally pinned to the top edge
+  (`pinToTop`), the precipitation chart reserving its own top band
+  (`reserveTop`) so the boxes stay clear of the probability curve. From the
+  partial (first) day only the remaining
   hours appear, and only if more than three hours are left; the value and
   position then refer to the visible remainder. The boxes are painted over the
   line's start and recalculated on zoom/pan/reset.

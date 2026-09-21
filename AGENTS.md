@@ -85,6 +85,19 @@ as an error band.
   overlay is blue (`#60a5fa`) and dashed. The hourly value covers the hour ending
   at the timestamp (`[t − 1 h, t)`), matching Open-Meteo's accumulation window.
   Data comes from `sun.py` (separate Open-Meteo call, see README).
+- **Combined precipitation chart:** `precipitation_probability` (line, left
+  axis, indigo) and `precipitation` (bars, right axis, green) share one
+  `CHARTS` entry. The title comes from `titleKey` ("Niederschlag"),
+  `meanLabelKey` names the primary legend/hover, and the amount is an overlay
+  `{ key, secondary: true, bars: true }` drawn by `overlayBars` as
+  `type: "bar"` on `yaxis: "y2"` (unshifted so it stays behind the line).
+  Overlays may carry their own `annotations`/`dailyAnnotations`; their
+  non-pinned boxes are anchored to the overlay axis (`yref: "y2"`), pinned ones
+  to `paper`. `reserveTop: true` shrinks `yaxis.domain` to `[0, 0.82]` when
+  top-pinned sum boxes exist, so the sums sit above the curve without overlap.
+  The secondary range is derived from the overlay series (`axisMax` overrides,
+  e.g. cloud cover 100). `collectSmalltalkMetrics` picks up the overlay
+  highlights via `entry.annotationOverlays`.
 - **Data start from now:** `ForecastResponse.now` (local time, `YYYY-MM-DDTHH:mm`)
   is set fresh per request. The frontend sets `xaxis.minallowed` to this value
   (hourly) or to 00:00 today (daily) so that past data stays invisible even via
