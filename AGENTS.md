@@ -141,10 +141,12 @@ as an error band.
   `Plotly.relayout`). Daily mode: `tickmode: "array"` with all block timestamps
   centred in the day (`<day>T12:00`, `dailyPlotTimestamp`) as `tickvals` and
   `ticktext` from `weekdayName()` so that no day is omitted; the daily **data
-  points/traces** use the same centred timestamps, while the raw timestamps stay
-  in use for day grouping, `dayShapes` bins and the axis range. Weekdays always
-  come from `I18n.weekdays()` (not from the Plotly locale, which is not reliable
-  here).
+  points/traces** use the same centred timestamps with a small marker per day, so
+  the axis shows exactly one x gridline per day, while the raw timestamps stay in
+  use for day grouping and the axis range. The alternating day shading
+  (`dayShapes`) exists only in hourly mode; the daily view has no day areas.
+  Weekdays always come from `I18n.weekdays()` (not from the Plotly locale, which
+  is not reliable here).
 - **Hover tooltips:** instead of `%{x}`/`hoverformat`, the x label is computed via
   `hoverXLabel()` in `frontend/app.js` and passed as the **last** `customdata`
   element: hourly `weekdayName + " HH:MM"` (e.g. `Thu 14:00`), daily only

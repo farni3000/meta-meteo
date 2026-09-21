@@ -85,8 +85,10 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   respective line. (The feels-like overlay is currently commented out.)
   Highlights that round to `0.0` are omitted. All daily data points sit centred
   in their day (`<day>T12:00`), like the daily x labels, so the first and last
-  days are fully visible. Configuration is via `annotations` (hourly) and
-  `dailyAnnotations` (daily) in the respective `CHARTS` entry.
+  days are fully visible; each day shows a small marker and exactly one x
+  gridline, and unlike the hourly view the daily charts have no alternating day
+  shading. Configuration is via `annotations` (hourly) and `dailyAnnotations`
+  (daily) in the respective `CHARTS` entry.
 - Consistent number notation: all values in hover tooltips and chart annotations
   are output with one decimal place and a unit (e.g. `23.4 °C`, `3.2 mm`).
   Formatting is centralised via `formatNumber`/`formatValue` with the

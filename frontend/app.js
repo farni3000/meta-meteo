@@ -826,8 +826,9 @@ function dailyExtremesTraces(x, extremes, unit) {
     y: values,
     customdata: customdata(values),
     type: "scatter",
-    mode: "lines",
+    mode: "lines+markers",
     line: { color, width: 2.5 },
+    marker: { size: 6, color, line: { width: 0 } },
     name: t(labelKey),
     legendrank: rank,
     hovertemplate: t("chart.hoverCeilingTemplate", { label: t(labelKey) }),
@@ -1146,8 +1147,11 @@ function buildTraces(x, series, color, cap = null, options = {}) {
       y: series.mean,
       customdata,
       type: "scatter",
-      mode: "lines",
+      mode: options.markers ? "lines+markers" : "lines",
       line: { color, width: 2.5 },
+      ...(options.markers
+        ? { marker: { size: 6, color, line: { width: 0 } } }
+        : {}),
       name,
       yaxis,
       hovertemplate: hoverTemplate,
@@ -1313,7 +1317,7 @@ function nextDayString(day) {
   return next.toISOString().slice(0, 10);
 }
 
-function dayShapes(timestamps, mode) {
+function dayShapes(timestamps) {
   if (!timestamps.length) return [];
   const days = [];
   timestamps.forEach((timestamp) => {
@@ -1328,9 +1332,7 @@ function dayShapes(timestamps, mode) {
     const end =
       index + 1 < days.length
         ? days[index + 1].start
-        : mode === "hourly"
-        ? `${nextDayString(entry.day)}T00:00`
-        : nextDayString(entry.day);
+        : `${nextDayString(entry.day)}T00:00`;
     shapes.push({
       type: "rect",
       xref: "x",
@@ -1622,6 +1624,7 @@ function renderChart(param, block, series) {
         yaxis: "y",
         nameKey: param.meanLabelKey,
         hoverTemplate: primaryHover,
+        markers: state.mode === "daily",
       });
   const ceiling = param.sunCeiling ? sunLineSeries(state.mode) : null;
   if (ceiling) {
@@ -1763,7 +1766,7 @@ function renderChart(param, block, series) {
     );
   }
 
-  const shapes = dayShapes(timestamps, state.mode);
+  const shapes = state.mode === "hourly" ? dayShapes(timestamps) : [];
   if (param.bands) {
     shapes.push(...bandShapes(param.bands));
   }
