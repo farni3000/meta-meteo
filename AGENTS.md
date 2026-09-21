@@ -90,7 +90,8 @@ as an error band.
   `CHARTS` entry. The title comes from `titleKey` ("Niederschlag"),
   `meanLabelKey` names the primary legend/hover, and the amount is an overlay
   `{ key, secondary: true, bars: true }` drawn by `overlayBars` as
-  `type: "bar"` on `yaxis: "y2"` (unshifted so it stays behind the line).
+  `type: "bar"` on `yaxis: "y2"` (unshifted so it stays behind the line) with an
+  asymmetric ±1σ `error_y` (lower whisker capped at 0).
   Overlays may carry their own `annotations`/`dailyAnnotations`; their
   non-pinned boxes are anchored to the overlay axis (`yref: "y2"`), pinned ones
   to `paper`. `reserveTop: true` shrinks `yaxis.domain` to `[0, 0.82]` when

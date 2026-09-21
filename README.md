@@ -41,9 +41,11 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   value.
 - Combined precipitation chart ("Precipitation"): precipitation probability as
   a line on the left axis (%, indigo `#818cf8`, with the usual ±1σ band) and
-  precipitation amount as bars on the right axis (green `#4ade80`). The amount's
-  daily totals are shown as boxes pinned to the top edge; a reserved top band
-  (the plotting area ends at 82 %) keeps them clear of the probability curve, so
+  precipitation amount as bars on the right axis (green `#4ade80`), each bar
+  carrying a ±1σ error bar for the model spread (the lower whisker is capped at
+  0). The amount's daily totals are shown as boxes pinned to the top edge; a
+  reserved top band (the plotting area ends at 82 %) keeps them clear of the
+  probability curve, so
   the two never overlap. The right axis scales dynamically to the amount. In the
   daily view the wettest day is highlighted as well.
 - Coloured pressure bands in the air-pressure chart: `<1000` low pressure,

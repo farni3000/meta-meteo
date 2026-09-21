@@ -1158,11 +1158,23 @@ function buildTraces(x, series, color, cap = null, options = {}) {
 function overlayBars(x, series, overlay) {
   const unit = series.unit || "";
   const counts = series.model_count || [];
+  const std = series.std || [];
   const customdata = series.mean.map((value, index) => [
     value === null || value === undefined ? "–" : formatValue(value, unit),
     counts[index] || 0,
     hoverXLabel(x[index]),
   ]);
+  const errorPlus = series.mean.map((value, index) => {
+    if (value === null || value === undefined) return null;
+    const spread = std[index];
+    return spread === null || spread === undefined ? null : spread;
+  });
+  const errorMinus = series.mean.map((value, index) => {
+    if (value === null || value === undefined) return null;
+    const spread = std[index];
+    if (spread === null || spread === undefined) return null;
+    return Math.min(spread, value);
+  });
   return {
     x,
     y: series.mean,
@@ -1170,6 +1182,15 @@ function overlayBars(x, series, overlay) {
     type: "bar",
     yaxis: "y2",
     marker: { color: overlay.color },
+    error_y: {
+      type: "data",
+      symmetric: false,
+      array: errorPlus,
+      arrayminus: errorMinus,
+      color: "#166534",
+      thickness: 1.2,
+      width: 4,
+    },
     name: t(overlay.labelKey),
     hovertemplate: t("chart.hoverOverlayTemplate", { label: t(overlay.labelKey) }),
   };
