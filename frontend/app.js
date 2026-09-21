@@ -182,7 +182,14 @@ function displayName(model) {
 }
 
 function chartInfoText(param, series) {
+  const hasDailySum =
+    state.mode === "daily" &&
+    ((param.dailyAnnotations && param.dailyAnnotations.sum) ||
+      (param.overlays || []).some(
+        (overlay) => overlay.dailyAnnotations && overlay.dailyAnnotations.sum
+      ));
   const parts = [t(param.infoKey)];
+  if (hasDailySum) parts.push(t("chart.sumRangeNote"));
   if (series.models_used.length) {
     parts.push(
       t("chart.infoModels", {
@@ -199,6 +206,13 @@ function chartInfoText(param, series) {
     );
   }
   return parts.join("\n\n");
+}
+
+function closeInfoPopups() {
+  document.querySelectorAll(".info-popup").forEach((popup) => {
+    popup.hidden = true;
+    popup.dataset.pinned = "0";
+  });
 }
 
 function modelLink(model) {
@@ -925,9 +939,10 @@ function rangeHighlights(param, config, context) {
         day: timestamp.slice(0, 10),
         x: dailyPlotTimestamp(timestamp),
         value: total,
-        text: formatValue(total, unit),
+        text: t("chart.sumPrefix", { value: formatValue(total, unit) }),
         direction: "pin",
         pinToTop: !!config.pinSum,
+        sumRange: true,
       });
     }
   }
@@ -1035,6 +1050,10 @@ function valueAnnotations(param, points, ctx, config, yref = "y") {
       }
     } else {
       annotation.yref = yref;
+    }
+    if (point.sumRange) {
+      annotation.hovertext = t("chart.sumRangeNote");
+      annotation.captureevents = true;
     }
     return annotation;
   });
@@ -1565,10 +1584,32 @@ function renderChart(param, block, series) {
     const info = document.createElement("span");
     info.className = "info";
     info.textContent = "i";
+    info.setAttribute("role", "button");
+    info.setAttribute("tabindex", "0");
     const infoText = chartInfoText(param, series);
-    info.title = infoText;
     info.setAttribute("aria-label", infoText.replace(/\n+/g, " "));
-    head.appendChild(info);
+    const popup = document.createElement("div");
+    popup.className = "info-popup";
+    popup.textContent = infoText;
+    popup.hidden = true;
+    popup.setAttribute("role", "tooltip");
+    const show = () => {
+      popup.hidden = false;
+    };
+    const hide = () => {
+      if (popup.dataset.pinned !== "1") popup.hidden = true;
+    };
+    info.addEventListener("mouseenter", show);
+    info.addEventListener("mouseleave", hide);
+    info.addEventListener("focus", show);
+    info.addEventListener("blur", hide);
+    info.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const pinned = popup.dataset.pinned === "1";
+      popup.dataset.pinned = pinned ? "0" : "1";
+      popup.hidden = pinned;
+    });
+    head.append(info, popup);
   }
   const applyZoom = document.createElement("button");
   applyZoom.className = "apply-zoom";
@@ -2246,7 +2287,9 @@ smalltalkModal.addEventListener("click", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !smalltalkModal.hidden) closeSmalltalkModal();
+  if (event.key !== "Escape") return;
+  if (!smalltalkModal.hidden) closeSmalltalkModal();
+  closeInfoPopups();
 });
 
 refreshBtn.addEventListener("click", refreshForecast);
@@ -2275,6 +2318,9 @@ searchInput.addEventListener("keydown", (event) => {
 
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".search-wrap")) closeSuggestions();
+  if (!event.target.closest(".info") && !event.target.closest(".info-popup")) {
+    closeInfoPopups();
+  }
 });
 
 applyStaticTranslations();

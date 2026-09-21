@@ -159,8 +159,10 @@ as an error band.
   `I18n.tickFormat(mode)`, hover date via the Plotly locale (`locale` in the
   `Plotly.newPlot` config, bundle from the Plotly CDN via `loadPlotlyLocale`).
 - **Model info understated:** above the charts only the "daily only" badge
-  remains. Model count and names are in the info tooltip behind the chart title
-  (`chartInfoText`, keys `chart.infoModels`/`models.coverage`), the count
+  remains. Model count and names are in the info popup behind the chart title
+  (`chartInfoText`, keys `chart.infoModels`/`models.coverage`); it opens on hover
+  and is pinned/unpinned by clicking the "i" (`closeInfoPopups` on outside
+  click/`Esc`). The count is
   additionally in the hover tooltip of the values (stays there). The "Models used
   per parameter" list is a collapsed-by-default `<details>` panel; the model list
   in it links via `MODEL_DOCS` to the Open-Meteo docs page of the respective
@@ -177,7 +179,10 @@ as an error band.
   follow the daily curve and re-scale on zoom; a point's `color` overrides the
   chart colour (temperature max/min boxes match their lines). `max`/`min` render
   as grey boxes with a coloured connector line without an arrowhead
-  (`arrowhead: 0`, `min` below the point); `sum` as a box without a line;
+  (`arrowhead: 0`, `min` below the point); `sum` as a box without a line, in the
+  daily view labelled `Summe: …` (`chart.sumPrefix`) with a range tooltip
+  (`sumRange` → annotation `hovertext` `chart.sumRangeNote`, also appended to the
+  info text in daily mode);
   `pinToTop`/`pinSum` place it via `yref: "paper"` at the top edge.
   `computeYRange` scales the y-axis with extra headroom (`topFactor` 0.3 pinned,
   0.22 otherwise), includes the draw `extraExtent` (temperature max/min lines and

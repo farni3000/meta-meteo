@@ -87,8 +87,11 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   in their day (`<day>T12:00`), like the daily x labels, so the first and last
   days are fully visible; each day shows a small marker and exactly one x
   gridline, and unlike the hourly view the daily charts have no alternating day
-  shading. Configuration is via `annotations` (hourly) and `dailyAnnotations`
-  (daily) in the respective `CHARTS` entry.
+  shading. The period total for sunshine hours and precipitation amount is
+  labelled `Summe: …` (`chart.sumPrefix`); its tooltip – both the box hover and
+  the chart info popup – states that the sum refers to the currently displayed
+  range (`chart.sumRangeNote`). Configuration is via `annotations` (hourly) and
+  `dailyAnnotations` (daily) in the respective `CHARTS` entry.
 - Consistent number notation: all values in hover tooltips and chart annotations
   are output with one decimal place and a unit (e.g. `23.4 °C`, `3.2 mm`).
   Formatting is centralised via `formatNumber`/`formatValue` with the
@@ -121,8 +124,9 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   parameter") lists which models contributed and which are missing; the model
   list above links each model name to the matching Open-Meteo documentation.
   Above the charts only the "daily only" badge remains; model count and names are
-  in the info tooltip behind the chart title, and the count is also in the hover
-  tooltip of the values.
+  in the info popup behind the chart title (the "i"), and the count is also in the
+  hover tooltip of the values. The info popup appears on hover and can be pinned by
+  clicking the "i" (closes on outside click or `Esc`).
 - "Help – I need a smalltalk topic" button next to "Reset zoom": sends the
   averages of the visible series (temperature incl. feels-like, sunshine, cloud
   cover, wind, precipitation probability, precipitation, UV index, air pressure),
