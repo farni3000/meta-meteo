@@ -706,7 +706,7 @@ function dailyHighlights(param, context) {
   return highlights;
 }
 
-const TEMP_MAX_COLOR = "#f87171";
+const TEMP_MAX_COLOR = "#f97316";
 const TEMP_MIN_COLOR = "#60a5fa";
 
 function computeAnnotationPoints(param, config, context) {
@@ -717,35 +717,88 @@ function computeAnnotationPoints(param, config, context) {
   return dailyHighlights(param, context);
 }
 
+function dailyPlotTimestamp(timestamp) {
+  return `${timestamp.slice(0, 10)}T12:00`;
+}
+
 function dailyGroupedExtremes(param) {
   const daily = state.data && state.data.daily;
   const hourly = state.data && state.data.hourly;
   const source = hourly && hourly.parameters && hourly.parameters[param.key];
   if (!daily || !daily.timestamps || !source || !source.mean) return null;
+  const spread = source.std || [];
   const days = new Map();
   hourly.timestamps.forEach((timestamp, index) => {
     const value = source.mean[index];
     if (value === null || value === undefined || !isFinite(value)) return;
+    const std = spread[index];
     const day = timestamp.slice(0, 10);
     const entry = days.get(day);
     if (!entry) {
-      days.set(day, { max: value, min: value });
+      days.set(day, { max: value, min: value, maxStd: std, minStd: std });
       return;
     }
-    if (value > entry.max) entry.max = value;
-    if (value < entry.min) entry.min = value;
+    if (value > entry.max) {
+      entry.max = value;
+      entry.maxStd = std;
+    }
+    if (value < entry.min) {
+      entry.min = value;
+      entry.minStd = std;
+    }
   });
   let hasValue = false;
-  const max = daily.timestamps.map((timestamp) => {
-    const entry = days.get(timestamp.slice(0, 10));
-    if (entry) hasValue = true;
-    return entry ? entry.max : null;
+  const collect = (key, stdKey) =>
+    daily.timestamps.map((timestamp) => {
+      const entry = days.get(timestamp.slice(0, 10));
+      if (!entry) return null;
+      hasValue = true;
+      return { value: entry[key], std: entry[stdKey] };
+    });
+  const maxEntries = collect("max", "maxStd");
+  const minEntries = collect("min", "minStd");
+  if (!hasValue) return null;
+  return {
+    max: maxEntries.map((entry) => (entry ? entry.value : null)),
+    min: minEntries.map((entry) => (entry ? entry.value : null)),
+    maxStd: maxEntries.map((entry) => (entry ? entry.std : null)),
+    minStd: minEntries.map((entry) => (entry ? entry.std : null)),
+  };
+}
+
+function dailyBandTraces(x, values, stds, color) {
+  const lower = values.map((value, index) => {
+    const std = stds[index];
+    if (value === null || value === undefined || std === null || std === undefined) return null;
+    return value - std;
   });
-  const min = daily.timestamps.map((timestamp) => {
-    const entry = days.get(timestamp.slice(0, 10));
-    return entry ? entry.min : null;
+  const upper = values.map((value, index) => {
+    const std = stds[index];
+    if (value === null || value === undefined || std === null || std === undefined) return null;
+    return value + std;
   });
-  return hasValue ? { max, min } : null;
+  return [
+    {
+      x,
+      y: lower,
+      type: "scatter",
+      mode: "lines",
+      line: { width: 0 },
+      hoverinfo: "skip",
+      showlegend: false,
+    },
+    {
+      x,
+      y: upper,
+      type: "scatter",
+      mode: "lines",
+      line: { width: 0 },
+      fill: "tonexty",
+      fillcolor: bandColor(color),
+      hoverinfo: "skip",
+      showlegend: false,
+    },
+  ];
 }
 
 function dailyExtremesTraces(x, extremes, unit) {
@@ -754,31 +807,21 @@ function dailyExtremesTraces(x, extremes, unit) {
       value === null || value === undefined ? "–" : formatValue(value, unit),
       hoverXLabel(x[index]),
     ]);
+  const line = (values, color, labelKey) => ({
+    x,
+    y: values,
+    customdata: customdata(values),
+    type: "scatter",
+    mode: "lines",
+    line: { color, width: 2.5 },
+    name: t(labelKey),
+    hovertemplate: t("chart.hoverCeilingTemplate", { label: t(labelKey) }),
+  });
   return [
-    {
-      x,
-      y: extremes.max,
-      customdata: customdata(extremes.max),
-      type: "scatter",
-      mode: "lines",
-      line: { color: TEMP_MAX_COLOR, width: 1.5, dash: "dot" },
-      name: t("chart.temperature.maxLine"),
-      hovertemplate: t("chart.hoverCeilingTemplate", {
-        label: t("chart.temperature.maxLine"),
-      }),
-    },
-    {
-      x,
-      y: extremes.min,
-      customdata: customdata(extremes.min),
-      type: "scatter",
-      mode: "lines",
-      line: { color: TEMP_MIN_COLOR, width: 1.5 },
-      name: t("chart.temperature.minLine"),
-      hovertemplate: t("chart.hoverCeilingTemplate", {
-        label: t("chart.temperature.minLine"),
-      }),
-    },
+    ...dailyBandTraces(x, extremes.max, extremes.maxStd, TEMP_MAX_COLOR),
+    line(extremes.max, TEMP_MAX_COLOR, "chart.temperature.maxLine"),
+    ...dailyBandTraces(x, extremes.min, extremes.minStd, TEMP_MIN_COLOR),
+    line(extremes.min, TEMP_MIN_COLOR, "chart.temperature.minLine"),
   ];
 }
 
@@ -814,10 +857,11 @@ function rangeHighlights(param, config, context) {
       const timestamp = timestamps[best.index];
       highlights.push({
         day: timestamp.slice(0, 10),
-        x: timestamp,
+        x: dailyPlotTimestamp(timestamp),
         value: best.value,
         text: formatValue(best.value, unit),
         direction: "up",
+        color: extremes ? TEMP_MAX_COLOR : undefined,
       });
     }
   }
@@ -828,10 +872,11 @@ function rangeHighlights(param, config, context) {
       const timestamp = timestamps[best.index];
       highlights.push({
         day: timestamp.slice(0, 10),
-        x: timestamp,
+        x: dailyPlotTimestamp(timestamp),
         value: best.value,
         text: formatValue(best.value, unit),
         direction: "down",
+        color: extremes ? TEMP_MIN_COLOR : undefined,
       });
     }
   }
@@ -848,7 +893,7 @@ function rangeHighlights(param, config, context) {
       const timestamp = timestamps[visible[Math.floor(visible.length / 2)]];
       highlights.push({
         day: timestamp.slice(0, 10),
-        x: timestamp,
+        x: dailyPlotTimestamp(timestamp),
         value: total,
         text: formatValue(total, unit),
         direction: "pin",
@@ -931,6 +976,7 @@ function valueAnnotations(param, points, ctx, config) {
     const pinToTop =
       pinned && !!(point.pinToTop !== undefined ? point.pinToTop : active.pinToTop);
     const baseAy = direction === "down" ? 28 : -28;
+    const color = point.color || param.color;
     const arrow = pinned ? { ax: 0, ay: 0 } : resolveArrow(active, point.x, ctx, baseAy);
     const annotation = {
       x: point.x,
@@ -940,14 +986,14 @@ function valueAnnotations(param, points, ctx, config) {
       showarrow: !pinned,
       arrowhead: 0,
       arrowwidth: 1,
-      arrowcolor: hexToRgba(param.color, 0.75),
+      arrowcolor: hexToRgba(color, 0.75),
       ...arrow,
       standoff: 6,
       bgcolor: "rgba(34, 46, 64, 1)",
-      bordercolor: hexToRgba(param.color, 0.8),
+      bordercolor: hexToRgba(color, 0.8),
       borderwidth: 1,
       borderpad: 3,
-      font: { size: 10, color: param.color },
+      font: { size: 10, color },
     };
     if (pinned) {
       if (pinToTop) {
@@ -1449,23 +1495,26 @@ function renderChart(param, block, series) {
     xRange = [start, end];
   }
 
+  const xTimestamps = state.mode === "daily" ? timestamps.map(dailyPlotTimestamp) : timestamps;
+  const activeConfig = state.mode === "daily" ? param.dailyAnnotations : param.annotations;
+  const dailyExtremes =
+    state.mode === "daily" && param.dailyExtremes ? dailyGroupedExtremes(param) : null;
+
   const capSeries = param.sunCeiling ? sunCapSeries(state.mode) : null;
-  const traces = buildTraces(
-    timestamps,
-    series,
-    param.color,
-    capSeries ? capSeries.mean : null
-  );
+  const traces = dailyExtremes
+    ? dailyExtremesTraces(xTimestamps, dailyExtremes, series.unit)
+    : buildTraces(xTimestamps, series, param.color, capSeries ? capSeries.mean : null);
   const ceiling = param.sunCeiling ? sunLineSeries(state.mode) : null;
   if (ceiling) {
-    const ceilingX = ceiling.timestamps || timestamps;
+    const rawCeilingX = ceiling.timestamps || timestamps;
+    const ceilingX = state.mode === "daily" ? rawCeilingX.map(dailyPlotTimestamp) : rawCeilingX;
     traces.splice(2, 0, ceilingTrace(ceilingX, ceiling, t("chart.sunshine.max")));
   }
   let secondaryUnit = null;
   (param.overlays || []).forEach((overlay) => {
     const overlaySeries = block.parameters[overlay.key];
     if (!overlaySeries || overlaySeries.models_used.length === 0) return;
-    traces.push(overlayTrace(timestamps, overlaySeries, overlay));
+    traces.push(overlayTrace(xTimestamps, overlaySeries, overlay));
     if (overlay.secondary) secondaryUnit = overlaySeries.unit || "";
   });
 
@@ -1474,17 +1523,11 @@ function renderChart(param, block, series) {
     const directionSeries = block.parameters[param.direction.key];
     if (directionSeries && directionSeries.models_used.length > 0) {
       const arrowStep = state.mode === "hourly" ? 3 : 1;
-      traces.push(directionTrace(timestamps, directionSeries, param.color, arrowStep));
+      traces.push(directionTrace(xTimestamps, directionSeries, param.color, arrowStep));
       hasDirection = true;
     }
   }
 
-  const activeConfig = state.mode === "daily" ? param.dailyAnnotations : param.annotations;
-  const dailyExtremes =
-    state.mode === "daily" && param.dailyExtremes ? dailyGroupedExtremes(param) : null;
-  if (dailyExtremes) {
-    traces.push(...dailyExtremesTraces(timestamps, dailyExtremes, series.unit));
-  }
   const points = computeAnnotationPoints(param, activeConfig, {
     mode: state.mode,
     bound,
@@ -1504,9 +1547,19 @@ function renderChart(param, block, series) {
   const hasMinPoint = rangePoints.some((point) => point.direction === "down");
   const extraExtent = (() => {
     if (!dailyExtremes) return null;
-    const values = [...dailyExtremes.max, ...dailyExtremes.min].filter(
-      (value) => value !== null && value !== undefined && isFinite(value)
-    );
+    const shifted = (values, stds, sign) =>
+      values.map((value, index) => {
+        const std = stds[index];
+        if (value === null || value === undefined || !isFinite(value)) return null;
+        if (std === null || std === undefined || !isFinite(std)) return value;
+        return value + sign * std;
+      });
+    const values = [
+      ...dailyExtremes.max,
+      ...dailyExtremes.min,
+      ...shifted(dailyExtremes.max, dailyExtremes.maxStd, 1),
+      ...shifted(dailyExtremes.min, dailyExtremes.minStd, -1),
+    ].filter((value) => value !== null && value !== undefined && isFinite(value));
     if (!values.length) return null;
     return [Math.min(...values), Math.max(...values)];
   })();
@@ -1587,7 +1640,7 @@ function renderChart(param, block, series) {
     }
   } else if (state.mode === "daily") {
     layout.xaxis.tickmode = "array";
-    layout.xaxis.tickvals = timestamps.map((timestamp) => `${timestamp.slice(0, 10)}T12:00`);
+    layout.xaxis.tickvals = xTimestamps;
     layout.xaxis.ticktext = timestamps.map(weekdayName);
   } else {
     layout.xaxis.nticks = 7;
@@ -1599,7 +1652,7 @@ function renderChart(param, block, series) {
   if (yRange) {
     layout.yaxis.range = yRange;
   }
-  const xCtx = chartXContext(xRange, timestamps);
+  const xCtx = chartXContext(xRange, xTimestamps);
   const annotations = [];
   if (param.bands && yRange) {
     annotations.push(...bandAnnotations(param.bands, yRange));

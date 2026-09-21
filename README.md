@@ -67,12 +67,15 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   air pressure), the highest value (wind, UV index, precipitation probability,
   precipitation amount) and, for precipitation amount and sunshine hours, the
   period total pinned to the top edge. They therefore follow the daily curve and
-  re-scale when zooming. The temperature chart additionally draws the daily
-  maximum (dotted) and daily minimum (blue) per day, derived from the hourly
-  series (the feels-like overlay is currently commented out). Highlights that
-  round to `0.0` are omitted. Configuration is via `annotations` (hourly) and
-  `dailyAnnotations` (daily) in the respective `CHARTS` entry; daily x labels are
-  centred on the day.
+  re-scale when zooming. The temperature chart shows only the daily maximum
+  (orange) and the daily minimum (blue) per day instead of the daily mean, both
+  derived from the hourly series and each with a ±1σ band taken from the hourly
+  spread at the extreme hour; the highlight boxes use the colour of the
+  respective line. (The feels-like overlay is currently commented out.)
+  Highlights that round to `0.0` are omitted. All daily data points sit centred
+  in their day (`<day>T12:00`), like the daily x labels, so the first and last
+  days are fully visible. Configuration is via `annotations` (hourly) and
+  `dailyAnnotations` (daily) in the respective `CHARTS` entry.
 - Consistent number notation: all values in hover tooltips and chart annotations
   are output with one decimal place and a unit (e.g. `23.4 °C`, `3.2 mm`).
   Formatting is centralised via `formatNumber`/`formatValue` with the

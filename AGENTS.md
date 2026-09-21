@@ -125,9 +125,12 @@ as an error band.
   `wallClockMs`/`isoLocal`. On zoom/pan, reset in the `plotly_relayout` handler
   via `hourlyTickLayout()` (together with the annotations in one
   `Plotly.relayout`). Daily mode: `tickmode: "array"` with all block timestamps
-  centred in the day (`<day>T12:00`) as `tickvals` and `ticktext` from
-  `weekdayName()` so that no day is omitted. Weekdays always come from
-  `I18n.weekdays()` (not from the Plotly locale, which is not reliable here).
+  centred in the day (`<day>T12:00`, `dailyPlotTimestamp`) as `tickvals` and
+  `ticktext` from `weekdayName()` so that no day is omitted; the daily **data
+  points/traces** use the same centred timestamps, while the raw timestamps stay
+  in use for day grouping, `dayShapes` bins and the axis range. Weekdays always
+  come from `I18n.weekdays()` (not from the Plotly locale, which is not reliable
+  here).
 - **Hover tooltips:** instead of `%{x}`/`hoverformat`, the x label is computed via
   `hoverXLabel()` in `frontend/app.js` and passed as the **last** `customdata`
   element: hourly `weekdayName + " HH:MM"` (e.g. `Thu 14:00`), daily only
@@ -149,20 +152,24 @@ as an error band.
 - **Highlights in the chart:** mode-dependent. Hourly via the `annotations` field
   on the `CHARTS` entry (`{ type: "max" | "sum" }`); `dailyHighlights` aggregates
   the **hourly series** from `state.data.hourly` per calendar day (daily maximum
-  or daily total). Daily via `dailyAnnotations` (`{ min, max, sum, pinSum }`), and
-  optionally `dailyExtremes: true` (temperature) to draw the per-day
-  maximum/minimum lines; `rangeHighlights` computes the highlights over the
-  **visible daily range** instead of per day, so the boxes follow the daily curve
-  and re-scale on zoom. `max`/`min` render as grey boxes with a coloured
-  connector line without an arrowhead (`arrowhead: 0`, `min` below the point);
-  `sum` as a box without a line; `pinToTop`/`pinSum` place it via
-  `yref: "paper"` at the top edge. `computeYRange` scales the y-axis with extra
-  headroom (`topFactor` 0.3 pinned, 0.22 otherwise), includes the draw
-  `extraExtent` (temperature max/min lines) and the min boxes. From the partial
-  first day, only the visible remainder from `now` counts in hourly mode – and
-  only if more than 3 h are left. Highlights that round to `0.0` are omitted. The
-  daily x-axis extends to `nextDayString` of the last day so that the labels of
-  the last day are not cut off.
+  or daily total). Daily via `dailyAnnotations` (`{ min, max, sum, pinSum }`), plus
+  `dailyExtremes: true` for temperature, which replaces the daily mean with the
+  per-day maximum (orange) and minimum (blue) lines; `dailyGroupedExtremes`
+  derives both from the aggregated hourly series and carries the hourly `std` at
+  the extreme hour, drawn as a ±1σ band per line. `rangeHighlights` computes the
+  highlights over the **visible daily range** instead of per day, so the boxes
+  follow the daily curve and re-scale on zoom; a point's `color` overrides the
+  chart colour (temperature max/min boxes match their lines). `max`/`min` render
+  as grey boxes with a coloured connector line without an arrowhead
+  (`arrowhead: 0`, `min` below the point); `sum` as a box without a line;
+  `pinToTop`/`pinSum` place it via `yref: "paper"` at the top edge.
+  `computeYRange` scales the y-axis with extra headroom (`topFactor` 0.3 pinned,
+  0.22 otherwise), includes the draw `extraExtent` (temperature max/min lines and
+  their bands) and the min boxes. From the partial first day, only the visible
+  remainder from `now` counts in hourly mode – and only if more than 3 h are left.
+  Highlights that round to `0.0` are omitted. The daily x-axis extends to
+  `nextDayString` of the last day so that the labels of the last day are not cut
+  off.
 - **Dynamic connector lines:** `dynamicArrow: true` on the `annotations` entry
   lets `resolveArrow`/`arrowOffset` tilt the headless line depending on x (point
   outside → label towards the centre, max. 45°, `standoff` keeps distance to the
