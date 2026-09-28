@@ -41,6 +41,11 @@
       align-items: center;
       gap: 14px;
     }
+    .brand-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
     .lang-select {
       padding: 8px 12px;
       font-size: 0.9rem;
@@ -201,6 +206,16 @@
     .btn:hover { border-color: var(--accent); color: var(--accent); }
     .btn:disabled { opacity: 0.6; cursor: default; }
     .btn[hidden] { display: none; }
+    .refresh-btn {
+      padding: 13px 22px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #dbeafe;
+      background: #1d3a54;
+      border: 1px solid #2f5d80;
+      border-radius: 10px;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: #e0f2fe; background: #224360; }
     #status { color: var(--muted); font-size: 0.9rem; }
     #status.error { color: var(--error); }
     #window-hint {
@@ -481,7 +496,10 @@
         <p data-i18n="brand.tagline">Viele Meinungen, ein Mittelwert: Wettervorhersage für Datenfreaks.</p>
       </div>
       </div>
-      <select id="language-select" class="lang-select" aria-label="Sprache / Language"></select>
+      <div class="brand-actions">
+        <button id="refresh" class="btn refresh-btn" data-i18n="toolbar.refresh" data-i18n-title="toolbar.refreshTitle" hidden>Aktualisieren</button>
+        <select id="language-select" class="lang-select" aria-label="Sprache / Language"></select>
+      </div>
     </div>
   </header>
   <main>
@@ -498,7 +516,6 @@
         <button data-mode="hourly" class="active" data-i18n="mode.hourly">stündlich</button>
         <button data-mode="daily" data-i18n="mode.daily">täglich</button>
       </div>
-      <button id="refresh" class="btn" data-i18n="toolbar.refresh" data-i18n-title="toolbar.refreshTitle" hidden>Aktualisieren</button>
       <button id="reset-zoom" class="btn" data-i18n="toolbar.resetZoom" hidden>Zoom für alle zurücksetzen</button>
       <button id="smalltalk" class="btn" data-i18n="toolbar.smalltalk" data-i18n-title="toolbar.smalltalkTitle" hidden>Hilfe – Ich brauch ein Smalltalk Thema</button>
       <span id="status"></span>
