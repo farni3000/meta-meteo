@@ -6,23 +6,25 @@ questions.
 
 ## What this is
 
-**MetaMeteo** – local web app (FastAPI backend + static browser frontend) that
+**MetaMeteo** – web app (FastAPI backend + static browser frontend) that
 fetches a 7-day forecast for a location from several Open-Meteo weather models,
 aggregates mean + spread per parameter and renders it as charts with Plotly. No
 API key for the forecast, no scheduler. The only LLM call is the optional
 smalltalk button (`POST /api/smalltalk`, DeepSeek, `DEEPSEEK_API_KEY` from
-`.env`); the forecast pipeline itself is fully deterministic.
+`.env`); the forecast pipeline itself is fully deterministic. Runs locally and as
+a single Docker container on a PaaS (Render blueprint `render.yaml`, free plan);
+favorites live in the browser, so no persistent disk is required.
 
 ## Structure
 
 ```
 backend/
-  main.py          # FastAPI app: /api/geocode, /api/forecast, /api/smalltalk, /api/favorites, cache, StaticFiles
-  config.py        # PARAMETER_SPECS, model lists, TTL, DISPLAY_NAMES, .env loading, DeepSeek settings
+  main.py          # FastAPI app: /api/geocode, /api/forecast, /api/smalltalk, cache, StaticFiles
+  config.py        # PARAMETER_SPECS, model lists, TTL, rate-limit settings, DISPLAY_NAMES, .env loading, DeepSeek settings
   models.py        # Pydantic response models + NormalizedForecast
   aggregation.py   # mean/std, circular aggregation, daily fallback
   cache.py         # in-memory TTL cache
-  favorites.py     # JSON persistence (data/favorites.json)
+  ratelimit.py     # in-memory per-IP sliding-window limiter for /api/smalltalk
   sun.py           # Open-Meteo sunrise/sunset fetch + max-sunshine ceiling
   alerts.py        # warnings (Bright Sky/DWD for DE, NWS for US)
   smalltalk.py     # DeepSeek prompt + client for the smalltalk button
@@ -124,7 +126,16 @@ as an error band.
   `DEEPSEEK_API_KEY` and returns a short, funny opener that is shown in the
   `#smalltalk-modal`; warnings in the payload are treated as the strongest hook.
   "Again" regenerates. The API key stays server-side. Missing key → `503`,
-  upstream failure → `502`.
+  upstream failure → `502`, rate limit → `429` (in-memory per-IP sliding window
+  `ratelimit.py`, `SMALLTALK_RATE_LIMIT`/`SMALLTALK_RATE_WINDOW_SECONDS`).
+- **Favorites:** purely client-side in `localStorage["metameteo.favorites"]`
+  (`frontend/app.js`); there are no `/api/favorites` endpoints and no server
+  state. Keeps the hosting target disk-less.
+- **Deployment:** single Docker image (`Dockerfile`) serving frontend + API,
+  `--workers 1` (in-memory cache/rate limit) and
+  `--proxy-headers --forwarded-allow-ips=*` so the per-IP limit sees the real
+  client IP. `render.yaml` is the Render blueprint (free plan, no disk,
+  `healthCheckPath: /`); `DEEPSEEK_API_KEY` is set in the dashboard, not the repo.
 - **Internationalisation:** no UI strings directly in the code – new texts as a
   key in all five languages in `frontend/i18n.js` (`TRANSLATIONS`), retrieved via
   `t()` (interpolation with `{{var}}`). `CHARTS` uses `labelKey`/`infoKey`

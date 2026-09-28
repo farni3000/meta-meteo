@@ -118,8 +118,9 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   timestamp of this fresh fetch (not the model run); on cache hits it stays
   unchanged, and a tooltip explains this.
 - Favorites: add/remove a location via the star; chips to the right of the
-  search, clickable, sortable via drag & drop, persisted server-side in
-  `data/favorites.json`.
+  search, clickable, sortable via drag & drop, persisted in the browser
+  (`localStorage["metameteo.favorites"]`). There is no server-side storage, so
+  every visitor keeps their own list and no data volume is needed when hosting.
 - Transparency: per parameter, a collapsed-by-default area ("Models used per
   parameter") lists which models contributed and which are missing; the model
   list above links each model name to the matching Open-Meteo documentation.
@@ -373,19 +374,22 @@ server stays stateless here.
 | `alerts` | Optional list of active warnings `{severity, event, headline, area, onset, expires}` (localised `severity` label); folded into the prompt as the strongest hook |
 
 Response: `{"text": "..."}`. Status `503` if `DEEPSEEK_API_KEY` is not set,
-`502` if DeepSeek is unreachable or returns nothing usable.
+`502` if DeepSeek is unreachable or returns nothing usable, `429` when the
+per-IP rate limit is exceeded (see `SMALLTALK_RATE_LIMIT`).
 
-### Favorites endpoints
+Because the endpoint triggers a paid LLM call and the app is meant to be
+reachable on the public internet, it is protected by an in-memory
+sliding-window limit per client IP (`backend/ratelimit.py`): by default
+`SMALLTALK_RATE_LIMIT` requests within `SMALLTALK_RATE_WINDOW_SECONDS` (5 per
+10 minutes). The response carries `Retry-After`. The limiter resets on restart
+and, behind a reverse proxy, needs the real client IP – that is why the
+container starts uvicorn with `--proxy-headers --forwarded-allow-ips=*`.
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/favorites` | List in stored order |
-| `POST` | `/api/favorites` | Add favorite (duplicates are ignored) |
-| `DELETE` | `/api/favorites/{id}` | Remove favorite (`id` = `lat,lon` to 4 decimals) |
-| `PUT` | `/api/favorites/order` | Set order (`{"ids": [...]}`) |
+### Favorites
 
-All endpoints return `{"favorites": [...]}`. Storage is in
-`data/favorites.json` (created on first write, is gitignored).
+Favorites are not stored on the server at all: the browser keeps them in
+`localStorage["metameteo.favorites"]` (see the feature list). This keeps the
+list per visitor and means the hosting target needs no persistent disk.
 
 ## Configuration
 
@@ -404,6 +408,8 @@ All endpoints return `{"favorites": [...]}`. Storage is in
   `unit="h"`. Example wind direction: `wind_direction_10m`, `unit="°"`,
   `circular=True`, daily `wind_direction_10m_dominant`.
 - `CACHE_TTL_SECONDS`, `FORECAST_MAX_DAYS`, `DISPLAY_NAMES`.
+- `SMALLTALK_RATE_LIMIT`, `SMALLTALK_RATE_WINDOW_SECONDS` – per-IP limit for the
+  smalltalk endpoint (default 5 requests / 600 s).
 
 The model selection is therefore changeable in one place and is overridden per
 request via the query parameter `models`.
@@ -453,11 +459,11 @@ end of the period and is shown in the frontend in the chart's info tooltip as
 meta-meteo/
   backend/
     main.py              # FastAPI app, endpoints, cache, StaticFiles
-    config.py            # model selection, parameter name mapping, TTL, data paths
+    config.py            # model selection, parameter name mapping, TTL, rate limit
     models.py            # Pydantic models + NormalizedForecast
     aggregation.py       # mean/std, daily fallback
     cache.py             # TTL cache
-    favorites.py         # FavoritesStore (JSON persistence)
+    ratelimit.py         # in-memory per-IP sliding-window limiter (smalltalk)
     sun.py               # sunrise/sunset fetch + max-sunshine ceiling
     alerts.py            # weather warnings (Bright Sky / NWS)
     smalltalk.py         # DeepSeek prompt + client for the smalltalk button
@@ -468,18 +474,22 @@ meta-meteo/
     tests/
       test_aggregation.py
       test_parameters.py
-      test_favorites.py
       test_local_now.py
       test_sun.py
       test_alerts.py
+      test_smalltalk.py
+      test_ratelimit.py
   frontend/
     index.html
     i18n.js              # translations, language detection, locale/cardinal directions
     app.js
+  Dockerfile             # production image (uvicorn, one worker, proxy headers)
+  .dockerignore
+  render.yaml            # Render blueprint (free plan, no persistent disk)
   requirements.txt
   pytest.ini
-  AGENTS.md            # short overview for agents (references this README)
-  README.md            # detailed docs (setup, API, configuration)
+  AGENTS.md              # short overview for agents (references this README)
+  README.md              # detailed docs (setup, API, configuration)
 ```
 
 ## Extensibility
@@ -491,8 +501,47 @@ meta-meteo/
   aggregation logic.
 - The model selection lives in `backend/config.py`, not hard-coded.
 - Deliberately **not** in v1: scraping sources, multi-location comparison,
-  automatic reload/scheduler, server deployment (Docker). The smalltalk opener
-  is the only LLM use; a general LLM summary of the forecast is not planned.
+  automatic reload/scheduler, per-user accounts. The smalltalk opener is the only
+  LLM use; a general LLM summary of the forecast is not planned.
+
+## Deployment
+
+The app can be hosted as a single container. The image runs uvicorn with one
+worker (the cache is in-memory) and reads the port from `$PORT`:
+
+```bash
+docker build -t metameteo .
+docker run --rm -p 8000:8000 -e DEEPSEEK_API_KEY=<key> metameteo
+# http://localhost:8000
+```
+
+### Render (free plan)
+
+`render.yaml` describes a Docker web service on the free plan. To deploy:
+
+1. Push the repo to GitHub (already the case here).
+2. In Render: **New + → Blueprint**, pick the repository. Render reads
+   `render.yaml`.
+3. Set `DEEPSEEK_API_KEY` in the service's environment (the blueprint marks it
+   as `sync: false`, so it is not stored in the repo). `DEEPSEEK_MODEL` is preset
+   to `deepseek-chat`.
+4. Deploy. The URL `https://<service>.onrender.com` is reachable from phone and
+   browser; Render terminates TLS.
+
+Notes:
+
+- **No persistent disk is needed** – favorites live in the browser and the
+  forecast cache is in-memory (10 min TTL).
+- The **free instance sleeps after ~15 min of inactivity**; the next request
+  takes roughly 30–60 s to wake up. For an always-on instance, switch the plan in
+  the dashboard.
+- The app must run with `--proxy-headers --forwarded-allow-ips=*` (as in the
+  `Dockerfile`) so that the per-IP rate limit sees the real client IP behind
+  Render's proxy.
+- `DEEPSEEK_API_KEY` is server-side only and never reaches the browser.
+
+Any other Docker host (Fly.io, Railway, a VPS with Caddy/nginx) works the same
+way; only the platform-specific manifest and the health check path (`/`) differ.
 
 ## Manually tested locations
 

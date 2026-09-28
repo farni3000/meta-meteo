@@ -8,7 +8,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.staticfiles import StaticFiles
 
 from .aggregation import aggregate
@@ -19,18 +19,15 @@ from .config import (
     DEFAULT_FORECAST_DAYS,
     DEFAULT_GEOCODE_LANGUAGE,
     DEFAULT_MODELS,
-    FAVORITES_PATH,
     FORECAST_MAX_DAYS,
     GEOCODE_LANGUAGES,
     HTTP_TIMEOUT_SECONDS,
+    SMALLTALK_RATE_LIMIT,
+    SMALLTALK_RATE_WINDOW_SECONDS,
     settings,
 )
-from .favorites import FavoritesStore, favorite_id
+from .ratelimit import SlidingWindowRateLimiter
 from .models import (
-    Favorite,
-    FavoriteCreate,
-    FavoriteOrder,
-    FavoritesResponse,
     ForecastResponse,
     GeocodeResponse,
     LocationInfo,
@@ -45,7 +42,13 @@ from .sun import SunTimes, build_sun_data, fetch_sun_times
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 _cache = TTLCache(CACHE_TTL_SECONDS)
-_favorites = FavoritesStore(FAVORITES_PATH)
+_smalltalk_limiter = SlidingWindowRateLimiter(
+    SMALLTALK_RATE_LIMIT, SMALLTALK_RATE_WINDOW_SECONDS
+)
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
 
 
 @asynccontextmanager
@@ -197,7 +200,14 @@ async def forecast(
 
 
 @app.post("/api/smalltalk", response_model=SmalltalkResponse)
-async def smalltalk(payload: SmalltalkRequest) -> SmalltalkResponse:
+async def smalltalk(payload: SmalltalkRequest, request: Request) -> SmalltalkResponse:
+    limit = _smalltalk_limiter.check(_client_ip(request))
+    if not limit.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Zu viele Anfragen. Bitte später erneut versuchen.",
+            headers={"Retry-After": str(limit.retry_after)},
+        )
     if not settings.deepseek_api_key:
         raise HTTPException(
             status_code=503,
@@ -221,30 +231,6 @@ async def smalltalk(payload: SmalltalkRequest) -> SmalltalkResponse:
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return SmalltalkResponse(text=text)
-
-
-@app.get("/api/favorites", response_model=FavoritesResponse)
-async def list_favorites() -> FavoritesResponse:
-    return FavoritesResponse(favorites=_favorites.list())
-
-
-@app.post("/api/favorites", response_model=FavoritesResponse)
-async def add_favorite(payload: FavoriteCreate) -> FavoritesResponse:
-    favorite = Favorite(
-        id=favorite_id(payload.latitude, payload.longitude),
-        **payload.model_dump(),
-    )
-    return FavoritesResponse(favorites=_favorites.add(favorite))
-
-
-@app.delete("/api/favorites/{favorite_id_value}", response_model=FavoritesResponse)
-async def delete_favorite(favorite_id_value: str) -> FavoritesResponse:
-    return FavoritesResponse(favorites=_favorites.remove(favorite_id_value))
-
-
-@app.put("/api/favorites/order", response_model=FavoritesResponse)
-async def reorder_favorites(payload: FavoriteOrder) -> FavoritesResponse:
-    return FavoritesResponse(favorites=_favorites.reorder(payload.ids))
 
 
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

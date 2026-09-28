@@ -10,9 +10,6 @@ from dotenv import load_dotenv
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
-DATA_DIR = PROJECT_ROOT / "data"
-FAVORITES_PATH = DATA_DIR / "favorites.json"
-
 
 @dataclass(frozen=True)
 class ParameterSpec:
@@ -102,6 +99,9 @@ FORECAST_MAX_DAYS = 16
 DEFAULT_FORECAST_DAYS = 7
 CACHE_TTL_SECONDS = 600
 HTTP_TIMEOUT_SECONDS = 20.0
+
+SMALLTALK_RATE_LIMIT = 5
+SMALLTALK_RATE_WINDOW_SECONDS = 600
 
 DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_MODEL = "deepseek-chat"

@@ -98,28 +98,6 @@ class ForecastResponse(BaseModel):
     now: str
 
 
-class FavoriteCreate(BaseModel):
-    name: str
-    country: Optional[str] = None
-    country_code: Optional[str] = None
-    admin1: Optional[str] = None
-    latitude: float
-    longitude: float
-    timezone: Optional[str] = None
-
-
-class Favorite(FavoriteCreate):
-    id: str
-
-
-class FavoritesResponse(BaseModel):
-    favorites: list[Favorite]
-
-
-class FavoriteOrder(BaseModel):
-    ids: list[str]
-
-
 class SmalltalkMetric(BaseModel):
     label: str
     value: str

@@ -327,16 +327,29 @@ function isFavorite(location) {
   return !!location && state.favorites.some((fav) => fav.id === favoriteId(location));
 }
 
-async function loadFavorites() {
+const FAVORITES_STORAGE_KEY = "metameteo.favorites";
+
+function readStoredFavorites() {
   try {
-    const response = await fetch("/api/favorites");
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    state.favorites = data.favorites || [];
+    const raw = localStorage.getItem(FAVORITES_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
-    state.favorites = [];
-    setStatus(t("status.favoritesLoadError", { message: error.message }), true);
+    return [];
   }
+}
+
+function writeStoredFavorites() {
+  try {
+    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(state.favorites));
+  } catch (error) {
+    setStatus(t("status.favoriteSaveError", { message: error.message }), true);
+  }
+}
+
+function loadFavorites() {
+  state.favorites = readStoredFavorites();
   renderFavorites();
 }
 
@@ -409,63 +422,30 @@ function renderFavorites() {
   });
 }
 
-async function toggleFavorite() {
+function toggleFavorite() {
   if (!state.selected) return;
   const id = favoriteId(state.selected);
-  try {
-    let response;
-    if (isFavorite(state.selected)) {
-      response = await fetch(`/api/favorites/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-    } else {
-      const { name, country, country_code, admin1, latitude, longitude, timezone } = state.selected;
-      response = await fetch("/api/favorites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, country, country_code, admin1, latitude, longitude, timezone }),
-      });
-    }
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    state.favorites = data.favorites || [];
-    renderFavorites();
-    renderLocationMeta();
-  } catch (error) {
-    setStatus(t("status.favoriteSaveError", { message: error.message }), true);
+  if (isFavorite(state.selected)) {
+    state.favorites = state.favorites.filter((favorite) => favorite.id !== id);
+  } else {
+    const { name, country, country_code, admin1, latitude, longitude, timezone } = state.selected;
+    state.favorites.push({ id, name, country, country_code, admin1, latitude, longitude, timezone });
   }
+  writeStoredFavorites();
+  renderFavorites();
+  renderLocationMeta();
 }
 
-async function removeFavorite(id, event) {
+function removeFavorite(id, event) {
   if (event) event.stopPropagation();
-  try {
-    const response = await fetch(`/api/favorites/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    state.favorites = data.favorites || [];
-    renderFavorites();
-    renderLocationMeta();
-  } catch (error) {
-    setStatus(t("status.favoriteRemoveError", { message: error.message }), true);
-  }
+  state.favorites = state.favorites.filter((favorite) => favorite.id !== id);
+  writeStoredFavorites();
+  renderFavorites();
+  renderLocationMeta();
 }
 
-async function persistOrder() {
-  try {
-    const response = await fetch("/api/favorites/order", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: state.favorites.map((favorite) => favorite.id) }),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    state.favorites = data.favorites || [];
-    renderFavorites();
-  } catch (error) {
-    setStatus(t("status.orderSaveError", { message: error.message }), true);
-  }
+function persistOrder() {
+  writeStoredFavorites();
 }
 
 async function selectLocation(location, options = {}) {

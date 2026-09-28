@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: metameteo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_MODEL
+        value: deepseek-chat
