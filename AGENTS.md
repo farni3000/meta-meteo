@@ -25,11 +25,12 @@ backend/
   aggregation.py   # mean/std, circular aggregation, daily fallback
   cache.py         # in-memory TTL cache
   ratelimit.py     # in-memory per-IP sliding-window limiter for /api/smalltalk
+  http.py          # get_with_retry: retry/backoff on transient 429/5xx
   sun.py           # Open-Meteo sunrise/sunset fetch + max-sunshine ceiling
   alerts.py        # warnings (Bright Sky/DWD for DE, NWS for US)
   smalltalk.py     # DeepSeek prompt + client for the smalltalk button
   sources/
-    open_meteo.py  # Open-Meteo client, one request per model
+    open_meteo.py  # Open-Meteo client, one request for all models
     geocoding.py   # Open-Meteo geocoding
     base.py        # ForecastSource(ABC)
   tests/           # pytest, run via backend/tests
@@ -41,8 +42,8 @@ frontend/
 
 ## Data flow
 
-`sources/open_meteo.py` normalises each model response into `NormalizedForecast`
-(`models.py`). `aggregation.aggregate()` builds from this a `ResolutionBlock`
+`sources/open_meteo.py` splits the single multi-model response into one
+`NormalizedForecast` per model (`models.py`). `aggregation.aggregate()` builds from this a `ResolutionBlock`
 with a `ParameterSeries` per parameter for each resolution (hourly/daily).
 `main.py` caches and serves `ForecastResponse`. In parallel with the model
 requests, `sun.py` fetches `sunrise`/`sunset` from Open-Meteo and derives the
@@ -62,7 +63,12 @@ as an error band.
   `circular=True`. `aggregation.py` then uses the vector mean
   (`sin`/`cos` → `atan2`) and circular standard deviation instead of the
   arithmetic mean. Never average angles arithmetically.
-- **One request per model**, in parallel via `asyncio.gather`.
+- **One Open-Meteo request for all models** (`models=a,b,c`), split from the
+  suffixed response fields (`variable_model`); forecast/sun/alerts still run in
+  parallel via `asyncio.gather`. Outbound calls use `get_with_retry`
+  (`backend/http.py`) and a shared `HTTP_USER_AGENT`. A `429` in the forecast
+  errors is detected in `frontend/app.js` and shown as
+  `status.forecastRateLimited` (shared/datacenter IPs are commonly limited).
 - **Warnings:** `alerts.py` picks the source by `country_code` (DE → Bright
   Sky, US → NWS) and normalises to `WeatherAlert` (CAP `severity` plus
   `severity_level` 1–4). Non-fatal (`[]` on error/unsupported country). The

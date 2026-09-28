@@ -22,6 +22,7 @@ from .config import (
     FORECAST_MAX_DAYS,
     GEOCODE_LANGUAGES,
     HTTP_TIMEOUT_SECONDS,
+    HTTP_USER_AGENT,
     SMALLTALK_RATE_LIMIT,
     SMALLTALK_RATE_WINDOW_SECONDS,
     settings,
@@ -37,7 +38,7 @@ from .models import (
 )
 from .smalltalk import generate_smalltalk
 from .sources.geocoding import GeocodingClient
-from .sources.open_meteo import OpenMeteoForecastSource
+from .sources.open_meteo import fetch_forecasts
 from .sun import SunTimes, build_sun_data, fetch_sun_times
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
@@ -53,7 +54,9 @@ def _client_ip(request: Request) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
+    async with httpx.AsyncClient(
+        timeout=HTTP_TIMEOUT_SECONDS, headers={"User-Agent": HTTP_USER_AGENT}
+    ) as client:
         app.state.client = client
         app.state.geocoder = GeocodingClient(client)
         yield
@@ -138,27 +141,22 @@ async def forecast(
         return cached
 
     client: httpx.AsyncClient = app.state.client
-    tasks = [
-        OpenMeteoForecastSource(client, model).fetch(lat, lon, days)
-        for model in model_list
-    ]
     gathered = await asyncio.gather(
-        *tasks,
+        fetch_forecasts(client, lat, lon, days, model_list),
         fetch_sun_times(client, lat, lon, days),
         fetch_alerts(client, lat, lon, country_code, lang),
         return_exceptions=True,
     )
-    results = gathered[:-2]
-    sun_times = gathered[-2]
-    alerts_result = gathered[-1]
+    forecasts_result = gathered[0]
+    sun_times = gathered[1]
+    alerts_result = gathered[2]
 
-    forecasts: list[NormalizedForecast] = []
     errors: list[str] = []
-    for model, result in zip(model_list, results):
-        if isinstance(result, NormalizedForecast):
-            forecasts.append(result)
-        else:
-            errors.append(f"{model}: {result}")
+    if isinstance(forecasts_result, list):
+        forecasts: list[NormalizedForecast] = forecasts_result
+    else:
+        forecasts = []
+        errors.append(str(forecasts_result))
 
     if not forecasts:
         raise HTTPException(

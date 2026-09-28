@@ -11,8 +11,11 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
 ## Features (v1)
 
 - Place search with autocomplete via the Open-Meteo Geocoding API.
-- Fetches several models via the Open-Meteo Forecast API – one request per model,
-  in parallel via `asyncio.gather`.
+- Fetches several models via the Open-Meteo Forecast API – **one request for all
+  models** (comma-separated `models`), split from the suffixed response fields.
+  This keeps the call count low, which matters on rate-limited or shared IPs;
+  the forecast, sunrise/sunset and alerts calls still run in parallel via
+  `asyncio.gather`.
 - Aggregation: mean + population standard deviation across all models that
   provide a value for the respective time step. Missing values are excluded (not
   treated as 0).
@@ -410,6 +413,9 @@ list per visitor and means the hosting target needs no persistent disk.
 - `CACHE_TTL_SECONDS`, `FORECAST_MAX_DAYS`, `DISPLAY_NAMES`.
 - `SMALLTALK_RATE_LIMIT`, `SMALLTALK_RATE_WINDOW_SECONDS` – per-IP limit for the
   smalltalk endpoint (default 5 requests / 600 s).
+- `HTTP_USER_AGENT` – identifying User-Agent sent with all outbound requests
+  (Open-Meteo prefers an identifiable client). Transient `429`/`5xx` responses
+  are retried by `backend/http.py` with exponential backoff.
 
 The model selection is therefore changeable in one place and is overridden per
 request via the query parameter `models`.
@@ -464,12 +470,13 @@ meta-meteo/
     aggregation.py       # mean/std, daily fallback
     cache.py             # TTL cache
     ratelimit.py         # in-memory per-IP sliding-window limiter (smalltalk)
+    http.py             # GET with retry/backoff for transient 429/5xx
     sun.py               # sunrise/sunset fetch + max-sunshine ceiling
     alerts.py            # weather warnings (Bright Sky / NWS)
     smalltalk.py         # DeepSeek prompt + client for the smalltalk button
     sources/
       base.py            # ForecastSource(ABC)
-      open_meteo.py      # Open-Meteo forecast client (one request per model)
+      open_meteo.py      # Open-Meteo forecast client (one request for all models)
       geocoding.py       # Open-Meteo geocoding client
     tests/
       test_aggregation.py
@@ -539,6 +546,13 @@ Notes:
   `Dockerfile`) so that the per-IP rate limit sees the real client IP behind
   Render's proxy.
 - `DEEPSEEK_API_KEY` is server-side only and never reaches the browser.
+- **Shared egress IPs can break the forecast:** the free Open-Meteo tier limits
+  per IP and reserves the right to block. On PaaS with shared outbound IPs (e.g.
+  Render) the forecast may return `429 Too Many Requests` even though geocoding
+  works. The app fetches all models in one request and retries transient 429/5xx
+  (`backend/http.py`), but a hard IP block cannot be worked around from the same
+  host – use a host with its own IP (VPS) or a paid Open-Meteo API key in that
+  case. The frontend shows a dedicated hint for this.
 
 Any other Docker host (Fly.io, Railway, a VPS with Caddy/nginx) works the same
 way; only the platform-specific manifest and the health check path (`/`) differ.

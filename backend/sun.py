@@ -7,6 +7,7 @@ from typing import Any, Optional
 import httpx
 
 from .config import FORECAST_API_URL
+from .http import get_with_retry
 from .models import SunData, SunSeries
 
 
@@ -34,8 +35,7 @@ async def fetch_sun_times(
         "timezone": "auto",
         "forecast_days": days,
     }
-    response = await client.get(FORECAST_API_URL, params=params)
-    response.raise_for_status()
+    response = await get_with_retry(client, FORECAST_API_URL, params=params)
     data = response.json()
     if data.get("error"):
         raise RuntimeError(data.get("reason", "unknown error"))

@@ -474,6 +474,10 @@ async function selectLocation(location, options = {}) {
     const payload = await response.json();
     if (!response.ok) {
       const detail = typeof payload.detail === "string" ? payload.detail : payload.detail?.message;
+      const errors = Array.isArray(payload.detail?.errors) ? payload.detail.errors.join(" ") : "";
+      if (response.status === 429 || errors.includes("429")) {
+        throw new Error(t("status.forecastRateLimited"));
+      }
       throw new Error(detail || `HTTP ${response.status}`);
     }
     state.data = payload;

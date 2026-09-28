@@ -92,6 +92,8 @@ BRIGHTSKY_ALERTS_URL = "https://api.brightsky.dev/alerts"
 NWS_ALERTS_URL = "https://api.weather.gov/alerts/active"
 NWS_USER_AGENT = "MetaMeteo/1.0 (local weather aggregation; +https://github.com/farni3000/meta-meteo)"
 
+HTTP_USER_AGENT = "MetaMeteo/1.0 (+https://github.com/farni3000/meta-meteo)"
+
 DEFAULT_GEOCODE_LANGUAGE = "de"
 GEOCODE_LANGUAGES = {"de", "en", "fr", "es", "it"}
 
