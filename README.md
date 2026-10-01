@@ -23,7 +23,9 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   unit vectors (`sin`/`cos` → `atan2`); the spread is the circular standard
   deviation `sqrt(-2·ln R)`.
 - Error band as `mean ± 1σ` in one Plotly chart per parameter. Legend order is
-  mean, then ±1σ spread, then overlays.
+  the primary mean, then the ±1σ spread, then the chart extras in reading order
+  (feels-like; max sunshine then cloud cover; precipitation amount; wind
+  direction).
 - Wind direction as rotated arrows in the wind chart (flow direction, i.e. the
   arrow points where the wind is blowing to). Arrows with high model disagreement
   become more transparent; hover shows cardinal direction, degrees, spread and

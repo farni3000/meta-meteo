@@ -14,6 +14,7 @@ const CHARTS = [
         labelKey: "chart.temperature.overlay",
         color: "#fca5a5",
         hourlyOnly: true,
+        legendRank: 3,
       },
     ],
     annotations: { type: "max", dynamicArrow: true },
@@ -34,6 +35,7 @@ const CHARTS = [
         color: "#60a5fa",
         secondary: true,
         axisMax: 100,
+        legendRank: 4,
       },
     ],
     annotations: { type: "sum", pinToTop: true },
@@ -45,7 +47,7 @@ const CHARTS = [
     infoKey: "chart.wind.info",
     color: "#38bdf8",
     zero: true,
-    direction: { key: "wind_direction_10m", labelKey: "chart.wind.direction" },
+    direction: { key: "wind_direction_10m", labelKey: "chart.wind.direction", legendRank: 3 },
     annotations: { type: "max", dynamicArrow: true },
     dailyAnnotations: { max: true },
   },
@@ -67,6 +69,7 @@ const CHARTS = [
         color: "#4ade80",
         secondary: true,
         bars: true,
+        legendRank: 3,
         annotations: { type: "sum", pinToTop: true },
         dailyAnnotations: { max: true, sum: true, pinSum: true },
       },
@@ -1205,6 +1208,7 @@ function overlayBars(x, series, overlay) {
       width: 4,
     },
     name: t(overlay.labelKey),
+    legendrank: overlay.legendRank || 3,
     hovertemplate: t("chart.hoverOverlayTemplate", { label: t(overlay.labelKey) }),
   };
 }
@@ -1225,7 +1229,7 @@ function overlayTrace(x, series, overlay) {
     mode: "lines",
     line: { color: overlay.color, width: 2, dash: "dash" },
     name: t(overlay.labelKey),
-    legendrank: 3,
+    legendrank: overlay.legendRank || 3,
     yaxis: overlay.secondary ? "y2" : "y",
     hovertemplate: t("chart.hoverOverlayTemplate", { label: t(overlay.labelKey) }),
   };
@@ -1262,6 +1266,7 @@ function ceilingTrace(x, series, label) {
     mode: "lines",
     line: { color: SUN_CEILING_COLOR, width: 1.2 },
     name: label,
+    legendrank: 3,
     hovertemplate: t("chart.hoverCeilingTemplate", { label }),
   };
 }
@@ -1273,7 +1278,7 @@ function toCardinal(degrees) {
   return cardinals[Math.round(normalized / 22.5) % 16];
 }
 
-function directionTrace(x, series, color, step = 1) {
+function directionTrace(x, series, color, step = 1, legendRank = 3) {
   const directions = series.mean;
   const spreads = series.std || [];
   const counts = series.model_count || [];
@@ -1317,6 +1322,7 @@ function directionTrace(x, series, color, step = 1) {
       line: { width: 0 },
     },
     name: t("chart.legendDirection"),
+    legendrank: legendRank,
     hovertemplate: t("chart.hoverDirectionTemplate"),
   };
 }
@@ -1693,7 +1699,15 @@ function renderChart(param, block, series) {
     const directionSeries = block.parameters[param.direction.key];
     if (directionSeries && directionSeries.models_used.length > 0) {
       const arrowStep = state.mode === "hourly" ? 3 : 1;
-      traces.push(directionTrace(xTimestamps, directionSeries, param.color, arrowStep));
+      traces.push(
+        directionTrace(
+          xTimestamps,
+          directionSeries,
+          param.color,
+          arrowStep,
+          param.direction.legendRank || 3
+        )
+      );
       hasDirection = true;
     }
   }
