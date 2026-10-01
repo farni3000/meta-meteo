@@ -8,10 +8,16 @@ const CHARTS = [
     infoKey: "chart.temperature.info",
     color: "#f97316",
     zero: false,
-    // Feels-like temperature is temporarily disabled on purpose; keep for later.
-    // overlays: [
-    //   { key: "apparent_temperature", labelKey: "chart.temperature.overlay", color: "#fca5a5" },
-    // ],
+    overlays: [
+      {
+        key: "apparent_temperature",
+        labelKey: "chart.temperature.overlay",
+        color: "#fca5a5",
+        hourlyOnly: true,
+        band: true,
+        bandLabelKey: "chart.temperature.overlayBand",
+      },
+    ],
     annotations: { type: "max", dynamicArrow: true },
     dailyExtremes: true,
     dailyAnnotations: { min: true, max: true },
@@ -527,6 +533,12 @@ function seriesExtent(series, cap) {
     max = Math.max(max, upper);
   });
   return isFinite(min) && isFinite(max) ? [min, max] : null;
+}
+
+function combineExtents(a, b) {
+  if (!a) return b || null;
+  if (!b) return a;
+  return [Math.min(a[0], b[0]), Math.max(a[1], b[1])];
 }
 
 function bandShapes(bands) {
@@ -1203,6 +1215,45 @@ function overlayBars(x, series, overlay) {
   };
 }
 
+function overlayBandTraces(x, series, overlay) {
+  const yaxis = overlay.secondary ? "y2" : "y";
+  const lower = series.mean.map((value, index) => {
+    if (value === null || value === undefined) return null;
+    const spread = series.std[index];
+    return spread === null || spread === undefined ? null : value - spread;
+  });
+  const upper = series.mean.map((value, index) => {
+    if (value === null || value === undefined) return null;
+    const spread = series.std[index];
+    return spread === null || spread === undefined ? null : value + spread;
+  });
+  const bandName = t(overlay.bandLabelKey || "chart.legendStd");
+  return [
+    {
+      x,
+      y: lower,
+      type: "scatter",
+      mode: "lines",
+      line: { width: 0 },
+      hoverinfo: "skip",
+      showlegend: false,
+      yaxis,
+    },
+    {
+      x,
+      y: upper,
+      type: "scatter",
+      mode: "lines",
+      line: { width: 0 },
+      fill: "tonexty",
+      fillcolor: bandColor(overlay.color),
+      hoverinfo: "skip",
+      name: bandName,
+      yaxis,
+    },
+  ];
+}
+
 function overlayTrace(x, series, overlay) {
   const unit = series.unit || "";
   const counts = series.model_count || [];
@@ -1658,14 +1709,27 @@ function renderChart(param, block, series) {
     traces.splice(2, 0, ceilingTrace(ceilingX, ceiling, t("chart.sunshine.max")));
   }
   let secondaryOverlay = null;
+  let overlayExtent = null;
+  const primaryTraceCount = traces.length;
   const annotationOverlays = [];
   (param.overlays || []).forEach((overlay) => {
+    if (overlay.hourlyOnly && state.mode !== "hourly") return;
     const overlaySeries = block.parameters[overlay.key];
     if (!overlaySeries || overlaySeries.models_used.length === 0) return;
+    if (overlay.band) {
+      traces.splice(
+        primaryTraceCount - 1,
+        0,
+        ...overlayBandTraces(xTimestamps, overlaySeries, overlay)
+      );
+    }
     if (overlay.bars) {
       traces.unshift(overlayBars(xTimestamps, overlaySeries, overlay));
     } else {
       traces.push(overlayTrace(xTimestamps, overlaySeries, overlay));
+    }
+    if (!overlay.secondary && !overlay.bars) {
+      overlayExtent = combineExtents(overlayExtent, seriesExtent(overlaySeries));
     }
     if (overlay.secondary) secondaryOverlay = { overlay, series: overlaySeries };
     const config = annotationOverlayConfig(overlay, state.mode);
@@ -1743,6 +1807,7 @@ function renderChart(param, block, series) {
     if (!values.length) return null;
     return [Math.min(...values), Math.max(...values)];
   })();
+  const combinedExtent = combineExtents(extraExtent, overlayExtent);
   let yRange = null;
   if (param.bands) {
     const extent = seriesExtent(series);
@@ -1760,10 +1825,10 @@ function renderChart(param, block, series) {
       0.3,
       ceilingExtent ? ceilingExtent[1] : null,
       capSeries ? capSeries.mean : null,
-      extraExtent,
+      combinedExtent,
       hasMinPoint ? 0.22 : 0.1
     );
-  } else if (rangePoints.length || extraExtent) {
+  } else if (rangePoints.length || combinedExtent) {
     yRange = computeYRange(
       param,
       series,
@@ -1771,7 +1836,7 @@ function renderChart(param, block, series) {
       0.22,
       null,
       null,
-      extraExtent,
+      combinedExtent,
       hasMinPoint ? 0.22 : 0.1
     );
   }
