@@ -84,7 +84,8 @@ as an error band.
   range. Example: the pressure bands in the air-pressure chart.
 - **Feels-like overlay:** `apparent_temperature` is a dashed overlay on the
   temperature chart, marked `hourlyOnly: true`; `renderChart` skips it in the
-  daily view. It has no uncertainty band.
+  daily view. It has no uncertainty band. Legend order is set via `legendrank`
+  (mean `1`, spread band `2`, overlays `3`).
 - **Max-sunshine ceiling:** the sunshine chart (`sunCeiling: true` in `CHARTS`)
   draws `state.data.sun.ceiling` (fine-sampled, own `timestamps`) as a thin grey
   solid line (width 1.2, `SUN_CEILING_COLOR`) behind the mean line; `sun.daily`

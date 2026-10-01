@@ -22,7 +22,8 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
 - Circular aggregation: direction values (e.g. 350° and 10°) are averaged via
   unit vectors (`sin`/`cos` → `atan2`); the spread is the circular standard
   deviation `sqrt(-2·ln R)`.
-- Error band as `mean ± 1σ` in one Plotly chart per parameter.
+- Error band as `mean ± 1σ` in one Plotly chart per parameter. Legend order is
+  mean, then ±1σ spread, then overlays.
 - Wind direction as rotated arrows in the wind chart (flow direction, i.e. the
   arrow points where the wind is blowing to). Arrows with high model disagreement
   become more transparent; hover shows cardinal direction, degrees, spread and

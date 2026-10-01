@@ -1147,6 +1147,7 @@ function buildTraces(x, series, color, cap = null, options = {}) {
       fillcolor: bandColor(color),
       hoverinfo: "skip",
       name: bandName,
+      legendrank: 2,
       yaxis,
     },
     {
@@ -1160,6 +1161,7 @@ function buildTraces(x, series, color, cap = null, options = {}) {
         ? { marker: { size: 6, color, line: { width: 0 } } }
         : {}),
       name,
+      legendrank: 1,
       yaxis,
       hovertemplate: hoverTemplate,
     },
@@ -1223,6 +1225,7 @@ function overlayTrace(x, series, overlay) {
     mode: "lines",
     line: { color: overlay.color, width: 2, dash: "dash" },
     name: t(overlay.labelKey),
+    legendrank: 3,
     yaxis: overlay.secondary ? "y2" : "y",
     hovertemplate: t("chart.hoverOverlayTemplate", { label: t(overlay.labelKey) }),
   };
