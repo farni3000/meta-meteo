@@ -87,7 +87,9 @@ as an error band.
   daily view. It has no uncertainty band. Legend order is set via `legendrank`:
   primary mean `1`, spread band `2`, then the chart extras in reading order
   (feels-like `3`; sun ceiling `3` + cloud cover `4`; precip amount `3`; wind
-  direction `3`), configured as `legendRank` on the overlay/direction entry.
+  direction `3`), configured as `legendRank` on the overlay/direction entry. The
+  horizontal legend needs an explicit `traceorder: "normal"` — without it Plotly
+  reverses the rank order.
 - **Max-sunshine ceiling:** the sunshine chart (`sunCeiling: true` in `CHARTS`)
   draws `state.data.sun.ceiling` (fine-sampled, own `timestamps`) as a thin grey
   solid line (width 1.2, `SUN_CEILING_COLOR`) behind the mean line; `sun.daily`

@@ -1828,7 +1828,14 @@ function renderChart(param, block, series) {
     margin: { l: 54, r: secondaryOverlay !== null || hasDirection ? 48 : 18, t: 42, b: 46 },
     height: 320,
     showlegend: true,
-    legend: { orientation: "h", x: 0.5, xanchor: "center", y: 1.0, yanchor: "bottom" },
+    legend: {
+      orientation: "h",
+      x: 0.5,
+      xanchor: "center",
+      y: 1.0,
+      yanchor: "bottom",
+      traceorder: "normal",
+    },
     xaxis: {
       gridcolor: "#334155",
       type: "date",
