@@ -27,9 +27,8 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   arrow points where the wind is blowing to). Arrows with high model disagreement
   become more transparent; hover shows cardinal direction, degrees, spread and
   model count.
-- Dashed overlays: apparent temperature in the hourly temperature chart (with
-  its own ±1σ band, legend "Gefühlte Temperatur 1σ", drawn under the solid
-  temperature line), cloud cover
+- Dashed overlays: apparent temperature in the hourly temperature chart (no
+  uncertainty band), cloud cover
   (right axis, %, blue `#60a5fa`) in the sunshine-hours chart. The
   sunshine-hours chart additionally shows the astronomically maximum possible
   sunshine duration as a thin grey solid line in the background: Open-Meteo
