@@ -1066,6 +1066,73 @@ function paintAnnotationsUnderBoxes(plot) {
   });
 }
 
+function separateAnnotationBoxes(plot) {
+  const layout = plot._fullLayout;
+  if (!layout || !layout.annotations || layout.annotations.length < 2) return;
+  const size = layout._size;
+  if (!size) return;
+  const rect = plot.getBoundingClientRect();
+  const plotLeft = rect.left + size.l;
+  const plotRight = plotLeft + size.w;
+  const annotations = layout.annotations.map((ann) => ({ ...ann }));
+  const boxes = [];
+  plot.querySelectorAll("g.annotation").forEach((group, index) => {
+    const ann = annotations[index];
+    if (!ann || ann.visible === false) return;
+    if (!ann.bgcolor || ann.bgcolor === "rgba(0,0,0,0)") return;
+    const textGroup = group.querySelector(".annotation-text-g");
+    if (!textGroup) return;
+    const box = textGroup.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    boxes.push({
+      ann,
+      left: box.left,
+      right: box.right,
+      top: box.top,
+      bottom: box.bottom,
+    });
+  });
+  if (boxes.length < 2) return;
+  const gap = 6;
+  let changed = false;
+  for (let pass = 0; pass < boxes.length; pass += 1) {
+    boxes.sort((a, b) => a.left - b.left);
+    let passChanged = false;
+    for (let index = 0; index < boxes.length - 1; index += 1) {
+      const a = boxes[index];
+      const b = boxes[index + 1];
+      if (a.bottom <= b.top || b.bottom <= a.top) continue;
+      const overlap = a.right + gap - b.left;
+      if (overlap <= 0) continue;
+      const bRoom = plotRight - b.right;
+      const aRoom = a.left - plotLeft;
+      const bKey = b.ann.showarrow === false ? "xshift" : "ax";
+      const aKey = a.ann.showarrow === false ? "xshift" : "ax";
+      if (bRoom >= overlap || bRoom >= aRoom) {
+        const dx = Math.min(overlap, bRoom);
+        if (dx < 1) continue;
+        b.ann[bKey] = Math.round((b.ann[bKey] || 0) + dx);
+        b.left += dx;
+        b.right += dx;
+      } else {
+        const dx = Math.min(overlap, aRoom);
+        if (dx < 1) continue;
+        a.ann[aKey] = Math.round((a.ann[aKey] || 0) - dx);
+        a.left -= dx;
+        a.right -= dx;
+      }
+      passChanged = true;
+      changed = true;
+    }
+    if (!passChanged) break;
+  }
+  if (!changed) return;
+  plot.__spreadBusy = true;
+  Plotly.relayout(plot, { annotations }).then(() => {
+    plot.__spreadBusy = false;
+  });
+}
+
 function annotationContext(entry, range) {
   return entry.mode === "daily"
     ? { mode: entry.mode, range }
@@ -1986,7 +2053,15 @@ function renderChart(param, block, series) {
       }
     });
     paintAnnotationsUnderBoxes(plot);
-    plot.on("plotly_afterplot", () => paintAnnotationsUnderBoxes(plot));
+    requestAnimationFrame(() => separateAnnotationBoxes(plot));
+    plot.on("plotly_afterplot", () => {
+      paintAnnotationsUnderBoxes(plot);
+      if (plot.__spreadBusy) {
+        plot.__spreadBusy = false;
+        return;
+      }
+      requestAnimationFrame(() => separateAnnotationBoxes(plot));
+    });
   });
 
   return card;

@@ -81,7 +81,10 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   partial (first) day only the remaining
   hours appear, and only if more than three hours are left; the value and
   position then refer to the visible remainder. The boxes are painted over the
-  line's start and recalculated on zoom/pan/reset.
+  line's start and recalculated on zoom/pan/reset. Overlapping boxes – e.g. two
+  daily maxima right around midnight or a highlight on a very short partial day
+  – are spread apart horizontally after rendering (`separateAnnotationBoxes`),
+  so they never sit on top of each other.
 - Daily view highlights instead refer to the visible period rather than to
   individual days: the highest and lowest value (temperature, sunshine hours,
   air pressure), the highest value (wind, UV index, precipitation probability,

@@ -227,6 +227,11 @@ as an error band.
   range (and stores them in `entry.points` for the smalltalk button) via the
   `plotly_relayout` handler. `paintAnnotationsUnderBoxes` reorders the SVG via
   `plotly_afterplot` so that the box lies over the start of the line.
+  `separateAnnotationBoxes` runs after each `plotly_afterplot` (and once after
+  the initial plot), measures the rendered boxes and shifts overlapping ones
+  horizontally via their `ax` (or `xshift` for pinned boxes; the arrow tip of
+  arrowed boxes stays on the peak), so boxes around midnight or on short partial
+  days no longer sit on top of each other.
 
 ## Tests
 
