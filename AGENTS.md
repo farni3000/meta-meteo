@@ -62,7 +62,8 @@ as an error band.
 - **Circular quantities:** mark angle values (e.g. `wind_direction_10m`) with
   `circular=True`. `aggregation.py` then uses the vector mean
   (`sin`/`cos` → `atan2`) and circular standard deviation instead of the
-  arithmetic mean. Never average angles arithmetically.
+  arithmetic mean. Never average angles arithmetically. The circular spread is
+  capped at 180° (nearly opposite directions would otherwise blow up).
 - **One Open-Meteo request for all models** (`models=a,b,c`), split from the
   suffixed response fields (`variable_model`); forecast/sun/alerts still run in
   parallel via `asyncio.gather`. Outbound calls use `get_with_retry`
@@ -107,7 +108,9 @@ as an error band.
   `meanLabelKey` names the primary legend/hover, and the amount is an overlay
   `{ key, secondary: true, bars: true }` drawn by `overlayBars` as
   `type: "bar"` on `yaxis: "y2"` (unshifted so it stays behind the line) with an
-  asymmetric ±1σ `error_y` (lower whisker capped at 0).
+  asymmetric ±1σ `error_y` (lower whisker capped at 0). The probability line's
+  ±1σ band is clamped to `[0, 100]` via the `bounds` field on the `CHARTS`
+  entry; `bounds` also limits the axis extent in `seriesExtent`.
   Overlays may carry their own `annotations`/`dailyAnnotations`; their
   non-pinned boxes are anchored to the overlay axis (`yref: "y2"`), pinned ones
   to `paper`. `reserveTop: true` shrinks `yaxis.domain` to `[0, 0.82]` when

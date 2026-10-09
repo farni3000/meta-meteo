@@ -59,6 +59,7 @@ const CHARTS = [
     infoKey: "chart.precip.info",
     color: "#818cf8",
     zero: true,
+    bounds: { min: 0, max: 100 },
     reserveTop: true,
     annotations: { type: "max", dynamicArrow: true },
     dailyAnnotations: { max: true },
@@ -517,7 +518,7 @@ function bandColor(hex) {
   return hexToRgba(hex, 0.18);
 }
 
-function seriesExtent(series, cap) {
+function seriesExtent(series, cap, bounds) {
   let min = Infinity;
   let max = -Infinity;
   series.mean.forEach((value, index) => {
@@ -529,6 +530,10 @@ function seriesExtent(series, cap) {
       const limit = cap[index];
       upper = limit !== null && limit !== undefined ? Math.min(upper, limit) : upper;
       lower = limit !== null && limit !== undefined ? clamp(lower, 0, limit) : Math.max(lower, 0);
+    }
+    if (bounds) {
+      if (bounds.min !== undefined) lower = Math.max(lower, bounds.min);
+      if (bounds.max !== undefined) upper = Math.min(upper, bounds.max);
     }
     min = Math.min(min, lower);
     max = Math.max(max, upper);
@@ -948,9 +953,10 @@ function computeYRange(
   extraMax = null,
   cap = null,
   extraExtent = null,
-  bottomFactor = 0.1
+  bottomFactor = 0.1,
+  bounds = null
 ) {
-  const extent = seriesExtent(series, cap) || [0, 0];
+  const extent = seriesExtent(series, cap, bounds) || [0, 0];
   let min = extent[0];
   let max = extent[1];
   if (extraExtent) {
@@ -1108,19 +1114,25 @@ function buildTraces(x, series, color, cap = null, options = {}) {
   const name = options.nameKey ? t(options.nameKey) : t("chart.legendMean");
   const hoverTemplate = options.hoverTemplate || t("chart.hoverMeanTemplate");
   const bandName = options.bandKey ? t(options.bandKey) : t("chart.legendStd");
+  const bounds = options.bounds || null;
   const capAt = (index) =>
     cap && cap[index] !== null && cap[index] !== undefined ? cap[index] : null;
+  const clampBand = (raw, index) => {
+    const bound = capAt(index);
+    let result = bound === null ? raw : clamp(raw, 0, bound);
+    if (bounds) {
+      if (bounds.min !== undefined) result = Math.max(result, bounds.min);
+      if (bounds.max !== undefined) result = Math.min(result, bounds.max);
+    }
+    return result;
+  };
   const lower = series.mean.map((value, index) => {
     if (value === null || series.std[index] === null) return null;
-    const raw = value - series.std[index];
-    const bound = capAt(index);
-    return bound === null ? raw : clamp(raw, 0, bound);
+    return clampBand(value - series.std[index], index);
   });
   const upper = series.mean.map((value, index) => {
     if (value === null || series.std[index] === null) return null;
-    const raw = value + series.std[index];
-    const bound = capAt(index);
-    return bound === null ? raw : clamp(raw, 0, bound);
+    return clampBand(value + series.std[index], index);
   });
   const unit = series.unit || "";
   const counts = series.model_count || [];
@@ -1663,6 +1675,7 @@ function renderChart(param, block, series) {
         nameKey: param.meanLabelKey,
         hoverTemplate: primaryHover,
         markers: state.mode === "daily",
+        bounds: param.bounds,
       });
   const ceiling = param.sunCeiling ? sunLineSeries(state.mode) : null;
   if (ceiling) {
@@ -1783,7 +1796,8 @@ function renderChart(param, block, series) {
       ceilingExtent ? ceilingExtent[1] : null,
       capSeries ? capSeries.mean : null,
       extraExtent,
-      hasMinPoint ? 0.22 : 0.1
+      hasMinPoint ? 0.22 : 0.1,
+      param.bounds
     );
   } else if (rangePoints.length || extraExtent) {
     yRange = computeYRange(
@@ -1792,9 +1806,10 @@ function renderChart(param, block, series) {
       rangePoints,
       0.22,
       null,
-      null,
+      capSeries ? capSeries.mean : null,
       extraExtent,
-      hasMinPoint ? 0.22 : 0.1
+      hasMinPoint ? 0.22 : 0.1,
+      param.bounds
     );
   }
 

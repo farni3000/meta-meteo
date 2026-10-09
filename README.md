@@ -21,7 +21,8 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   treated as 0).
 - Circular aggregation: direction values (e.g. 350° and 10°) are averaged via
   unit vectors (`sin`/`cos` → `atan2`); the spread is the circular standard
-  deviation `sqrt(-2·ln R)`.
+  deviation `sqrt(-2·ln R)`, capped at 180° (nearly opposite directions would
+  otherwise blow up).
 - Error band as `mean ± 1σ` in one Plotly chart per parameter. Legend order is
   the primary mean, then the ±1σ spread, then the chart extras in reading order
   (feels-like; max sunshine then cloud cover; precipitation amount; wind
@@ -47,7 +48,8 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   to 0), so it never exceeds the physical bound. Its hover shows the label and
   value.
 - Combined precipitation chart ("Precipitation"): precipitation probability as
-  a line on the left axis (%, indigo `#818cf8`, with the usual ±1σ band) and
+  a line on the left axis (%, indigo `#818cf8`, with the usual ±1σ band, clamped
+  to `[0, 100]`) and
   precipitation amount as bars on the right axis (green `#4ade80`), each bar
   carrying a ±1σ error bar for the model spread (the lower whisker is capped at
   0). The amount's daily totals are shown as boxes pinned to the top edge; a
@@ -339,6 +341,8 @@ itself; additionally the frontend appends a cache buster on refresh.
 
 `std` is the population standard deviation (`ddof=0`) across all models with a
 value. With exactly one model `std = 0`; with no model `mean`/`std` are `null`.
+For circular direction parameters `std` is the circular standard deviation
+(`sqrt(-2·ln R)` in degrees, capped at 180°).
 `hourly` and `daily` are always both included, the toggle in the frontend works
 without a new request.
 

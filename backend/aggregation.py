@@ -23,7 +23,8 @@ def _circular_stats(row: list[float]) -> tuple[float, float]:
         return mean_degrees, 0.0
     if resultant <= 0.0:
         return mean_degrees, 180.0
-    return mean_degrees, float(np.degrees(np.sqrt(-2.0 * np.log(resultant))))
+    std_degrees = float(np.degrees(np.sqrt(-2.0 * np.log(resultant))))
+    return mean_degrees, min(std_degrees, 180.0)
 
 
 def _aggregate_series(

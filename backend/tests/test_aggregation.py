@@ -155,6 +155,16 @@ def test_single_model_direction_has_zero_std() -> None:
     assert series.std == [0.0]
 
 
+def test_circular_std_is_capped_at_180() -> None:
+    a = make_forecast("a", ["t0"], {"wind_direction_10m": [0.0]})
+    b = make_forecast("b", ["t0"], {"wind_direction_10m": [180.0]})
+
+    hourly, _, _ = aggregate([a, b])
+    series = hourly.parameters["wind_direction_10m"]
+
+    assert series.std[0] == 180.0
+
+
 def test_direction_falls_back_to_daily_circular() -> None:
     hourly_times = ["2026-09-16T00:00", "2026-09-16T01:00"]
     daily_times = ["2026-09-16T00:00"]
