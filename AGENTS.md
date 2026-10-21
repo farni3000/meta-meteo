@@ -148,6 +148,14 @@ as an error band.
 - **Favorites:** purely client-side in `localStorage["metameteo.favorites"]`
   (`frontend/app.js`); there are no `/api/favorites` endpoints and no server
   state. Keeps the hosting target disk-less.
+- **Last location + mode restored on reload:** `selectLocation` persists the
+  selected location in `localStorage["metameteo.lastLocation"]`, the resolution
+  toggle persists `hourly`/`daily` in `localStorage["metameteo.mode"]` (both via
+  the `read/writeStored…` helpers next to the favorites storage code). At the
+  end of `app.js` the stored values are restored (`setMode(mode)` +
+  `selectLocation(stored)` without `refresh=1`, so the TTL cache may serve the
+  data). Parsing errors, invalid values or a blocked `localStorage` are silently
+  ignored (default empty start).
 - **Deployment:** single Docker image (`Dockerfile`) serving frontend + API,
   `--workers 1` (in-memory cache/rate limit) and
   `--proxy-headers --forwarded-allow-ips=*` so the per-IP limit sees the real

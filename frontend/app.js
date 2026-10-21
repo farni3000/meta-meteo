@@ -336,6 +336,56 @@ function isFavorite(location) {
 }
 
 const FAVORITES_STORAGE_KEY = "metameteo.favorites";
+const LAST_LOCATION_STORAGE_KEY = "metameteo.lastLocation";
+const LAST_MODE_STORAGE_KEY = "metameteo.mode";
+
+function readStoredLastLocation() {
+  try {
+    const raw = localStorage.getItem(LAST_LOCATION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    if (!Number.isFinite(parsed.latitude) || !Number.isFinite(parsed.longitude)) return null;
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeStoredLastLocation(location) {
+  try {
+    localStorage.setItem(LAST_LOCATION_STORAGE_KEY, JSON.stringify(location));
+  } catch (error) {
+    /* localStorage nicht verfügbar – letzter Ort gilt nur für die Sitzung */
+  }
+}
+
+function readStoredMode() {
+  try {
+    const stored = localStorage.getItem(LAST_MODE_STORAGE_KEY);
+    return stored === "hourly" || stored === "daily" ? stored : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeStoredMode(mode) {
+  try {
+    localStorage.setItem(LAST_MODE_STORAGE_KEY, mode);
+  } catch (error) {
+    /* localStorage nicht verfügbar – Auswahl gilt nur für die Sitzung */
+  }
+}
+
+function setMode(mode) {
+  if (mode !== "hourly" && mode !== "daily") return;
+  state.mode = mode;
+  writeStoredMode(mode);
+  document
+    .querySelectorAll("#resolution-toggle button")
+    .forEach((el) => el.classList.toggle("active", el.dataset.mode === mode));
+  if (state.data) render();
+}
 
 function readStoredFavorites() {
   try {
@@ -458,6 +508,15 @@ function persistOrder() {
 
 async function selectLocation(location, options = {}) {
   state.selected = location;
+  writeStoredLastLocation({
+    name: location.name,
+    country: location.country,
+    country_code: location.country_code,
+    admin1: location.admin1,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    timezone: location.timezone,
+  });
   searchInput.value = location.name;
   closeSuggestions();
   setStatus(t("status.loading"));
@@ -2400,11 +2459,7 @@ refreshBtn.addEventListener("click", refreshForecast);
 document.getElementById("resolution-toggle").addEventListener("click", (event) => {
   const button = event.target.closest("button");
   if (!button || button.dataset.mode === state.mode) return;
-  state.mode = button.dataset.mode;
-  document
-    .querySelectorAll("#resolution-toggle button")
-    .forEach((el) => el.classList.toggle("active", el === button));
-  if (state.data) render();
+  setMode(button.dataset.mode);
 });
 
 searchInput.addEventListener(
@@ -2430,3 +2485,8 @@ applyStaticTranslations();
 languageSelect.value = I18n.getLang();
 loadPlotlyLocale(I18n.getLang());
 loadFavorites();
+
+const storedMode = readStoredMode();
+if (storedMode) setMode(storedMode);
+const storedLocation = readStoredLastLocation();
+if (storedLocation) selectLocation(storedLocation);

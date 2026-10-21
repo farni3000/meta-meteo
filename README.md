@@ -133,6 +133,13 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   search, clickable, sortable via drag & drop, persisted in the browser
   (`localStorage["metameteo.favorites"]`). There is no server-side storage, so
   every visitor keeps their own list and no data volume is needed when hosting.
+- Last location and view are restored automatically on a page reload
+  (browser refresh, reopen or back navigation): the last selected location is
+  saved in `localStorage["metameteo.lastLocation"]` and reloaded after the page
+  load, together with the last selected resolution (`hourly`/`daily`,
+  `localStorage["metameteo.mode"]`). The server cache may serve the data, so a
+  reload stays rate-limit friendly; the refresh button remains the way to force
+  fresh model data.
 - Transparency: per parameter, a collapsed-by-default area ("Models used per
   parameter") lists which models contributed and which are missing; the model
   list above links each model name to the matching Open-Meteo documentation.
