@@ -92,8 +92,10 @@ as an error band.
   traces), with a vertical gradient mask fading towards the bottom. It removes
   its `[data-frost]`/`[data-frost-defs]` nodes and rebuilds them on every
   `plotly_afterplot` (zoom/pan/resize), and draws nothing if 0 °C is outside the
-  y range. The pattern is in `userSpaceOnUse`, so crystal size and density stay
-  constant in screen pixels.
+  y range. The pattern is in `userSpaceOnUse` with its tile origin (`x`/`y`) at
+  the frost corner (plot left × 0 °C), so crystal size and density stay constant
+  in screen pixels while nothing is clipped at the zero line or the left edge
+  (only right/bottom).
 - **Feels-like overlay:** `apparent_temperature` is a dashed overlay on the
   temperature chart, marked `hourlyOnly: true`; `renderChart` skips it in the
   daily view. It has no uncertainty band. Legend order is set via `legendrank`:

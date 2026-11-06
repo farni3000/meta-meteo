@@ -20,7 +20,7 @@ const CHARTS = [
     annotations: { type: "max", dynamicArrow: true },
     dailyExtremes: true,
     dailyAnnotations: { min: true, max: true },
-    frost: { at: 0, color: "#93c5fd" },
+    frost: { at: 0, color: "#bfdbfe" },
   },
   {
     key: "sunshine_duration",
@@ -692,18 +692,20 @@ function snowflakePath(radius) {
   return parts.join("");
 }
 
-function frostPattern(id, color) {
+function frostPattern(id, color, x, y) {
   const pattern = svgEl("pattern", {
     id,
-    width: 120,
-    height: 96,
+    x,
+    y,
+    width: 150,
+    height: 120,
     patternUnits: "userSpaceOnUse",
   });
   [
-    { x: 18, y: 16, radius: 5.2, rotate: 14, opacity: 0.32 },
-    { x: 82, y: 40, radius: 3.2, rotate: -12, opacity: 0.19 },
-    { x: 44, y: 74, radius: 4.5, rotate: 26, opacity: 0.26 },
-    { x: 104, y: 86, radius: 3.6, rotate: -22, opacity: 0.17 },
+    { x: 24, y: 12, radius: 7, rotate: 14, opacity: 0.55 },
+    { x: 104, y: 50, radius: 4.2, rotate: -12, opacity: 0.3 },
+    { x: 56, y: 92, radius: 6, rotate: 26, opacity: 0.45 },
+    { x: 134, y: 110, radius: 4.8, rotate: -22, opacity: 0.34 },
   ].forEach((crystal) => {
     const group = svgEl("g", {
       transform: `translate(${crystal.x} ${crystal.y}) rotate(${crystal.rotate})`,
@@ -713,7 +715,7 @@ function frostPattern(id, color) {
         d: snowflakePath(crystal.radius),
         fill: "none",
         stroke: color,
-        "stroke-width": 0.7,
+        "stroke-width": 0.9,
         "stroke-linecap": "round",
         "stroke-opacity": crystal.opacity,
       })
@@ -751,7 +753,7 @@ function frostField(plot, param, active) {
   const maskId = `frost-mask-${key}`;
   const gradientId = `frost-fade-${key}`;
   const defs = svgEl("defs", { "data-frost-defs": key });
-  defs.appendChild(frostPattern(patternId, frost.color));
+  defs.appendChild(frostPattern(patternId, frost.color, left, top));
   const gradient = svgEl("linearGradient", {
     id: gradientId,
     x1: 0,
@@ -761,8 +763,8 @@ function frostField(plot, param, active) {
   });
   [
     { offset: 0, opacity: 1 },
-    { offset: 0.55, opacity: 0.7 },
-    { offset: 1, opacity: 0.18 },
+    { offset: 0.55, opacity: 0.8 },
+    { offset: 1, opacity: 0.3 },
   ].forEach((stop) => {
     gradient.appendChild(
       svgEl("stop", { offset: stop.offset, "stop-color": "#fff", "stop-opacity": stop.opacity })
