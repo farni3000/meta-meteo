@@ -63,6 +63,15 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   to sea level, the thresholds apply regardless of the location's altitude. The
   y-axis scales dynamically to the data range so that only the relevant bands are
   visible.
+- Ice-crystal field below 0 °C in the temperature chart: when the visible data
+  actually dips below freezing, the area under the 0 °C line gets a very faint
+  blue tint and a scatter of small snowflakes that fade out towards the bottom
+  (`frost` config in the `CHARTS` entry). The crystals are an SVG pattern in the
+  plot's background layer, so they keep a constant screen size and density while
+  zooming and sit behind the curves; they are rebuilt after every
+  `plotly_afterplot` and vanish when 0 °C leaves the visible y range. The axis is
+  extended to at least −1.5 °C (or 8 % of the span) so the zone is recognisable
+  even just below freezing. Locations without frost are unchanged.
 - "hourly / daily" toggle; hourly starts the view with a sliding 3-day window
   from now (zoom out for all 7 days). A trailing calendar day is only included
   if at least 3 hours of it fall inside the window, otherwise the window ends at

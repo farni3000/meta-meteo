@@ -83,6 +83,17 @@ as an error band.
   (`{ from, to, label, color }`), `renderChart` renders filled areas, boundary
   lines and right-aligned labels; the y-axis scales dynamically to the data
   range. Example: the pressure bands in the air-pressure chart.
+- **Frost field:** `frost: { at: 0, color }` on the temperature `CHARTS` entry.
+  `renderChart` only counts it as active when the data minimum (hourly
+  `mean − σ`, daily the daily minimum incl. σ) is below `at`, and then extends
+  `yRange` down to at least `at − max(1.5, 8 % of the span)`. `frostField(plot,
+  param, active)` draws an SVG `<pattern>` of small snowflakes plus a faint tint
+  as two rects in the last child of `.bglayer` (above the day stripes, below all
+  traces), with a vertical gradient mask fading towards the bottom. It removes
+  its `[data-frost]`/`[data-frost-defs]` nodes and rebuilds them on every
+  `plotly_afterplot` (zoom/pan/resize), and draws nothing if 0 °C is outside the
+  y range. The pattern is in `userSpaceOnUse`, so crystal size and density stay
+  constant in screen pixels.
 - **Feels-like overlay:** `apparent_temperature` is a dashed overlay on the
   temperature chart, marked `hourlyOnly: true`; `renderChart` skips it in the
   daily view. It has no uncertainty band. Legend order is set via `legendrank`:

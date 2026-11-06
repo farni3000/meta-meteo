@@ -20,6 +20,7 @@ const CHARTS = [
     annotations: { type: "max", dynamicArrow: true },
     dailyExtremes: true,
     dailyAnnotations: { min: true, max: true },
+    frost: { at: 0, color: "#93c5fd" },
   },
   {
     key: "sunshine_duration",
@@ -651,6 +652,163 @@ function bandAnnotations(bands, range) {
         opacity: 0.9,
       };
     });
+}
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS(SVG_NS, tag);
+  Object.entries(attrs || {}).forEach(([key, value]) => el.setAttribute(key, String(value)));
+  return el;
+}
+
+function snowflakePath(radius) {
+  const rad = (deg) => (deg * Math.PI) / 180;
+  const parts = [];
+  for (let arm = 0; arm < 3; arm += 1) {
+    const angle = rad(arm * 60);
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+    parts.push(
+      `M${(-dx * radius).toFixed(2)},${(-dy * radius).toFixed(2)}` +
+        `L${(dx * radius).toFixed(2)},${(dy * radius).toFixed(2)}`
+    );
+    [1, -1].forEach((side) => {
+      const outward = side === 1 ? angle : angle + Math.PI;
+      [0.55, 0.8].forEach((position) => {
+        const bx = side * dx * radius * position;
+        const by = side * dy * radius * position;
+        [32, -32].forEach((spread) => {
+          const barb = outward + rad(spread);
+          const length = radius * 0.36;
+          parts.push(
+            `M${bx.toFixed(2)},${by.toFixed(2)}` +
+              `L${(bx + Math.cos(barb) * length).toFixed(2)},${(by + Math.sin(barb) * length).toFixed(2)}`
+          );
+        });
+      });
+    });
+  }
+  return parts.join("");
+}
+
+function frostPattern(id, color) {
+  const pattern = svgEl("pattern", {
+    id,
+    width: 120,
+    height: 96,
+    patternUnits: "userSpaceOnUse",
+  });
+  [
+    { x: 18, y: 16, radius: 5.2, rotate: 14, opacity: 0.32 },
+    { x: 82, y: 40, radius: 3.2, rotate: -12, opacity: 0.19 },
+    { x: 44, y: 74, radius: 4.5, rotate: 26, opacity: 0.26 },
+    { x: 104, y: 86, radius: 3.6, rotate: -22, opacity: 0.17 },
+  ].forEach((crystal) => {
+    const group = svgEl("g", {
+      transform: `translate(${crystal.x} ${crystal.y}) rotate(${crystal.rotate})`,
+    });
+    group.appendChild(
+      svgEl("path", {
+        d: snowflakePath(crystal.radius),
+        fill: "none",
+        stroke: color,
+        "stroke-width": 0.7,
+        "stroke-linecap": "round",
+        "stroke-opacity": crystal.opacity,
+      })
+    );
+    pattern.appendChild(group);
+  });
+  return pattern;
+}
+
+// Scatters small ice crystals over the area below the frost threshold (y < 0 °C).
+// Rebuilt after every plotly_afterplot because zoom/pan/resize change the band.
+function frostField(plot, param, active) {
+  const frost = param.frost;
+  if (!frost) return;
+  const layout = plot._fullLayout;
+  const yAxis = layout && layout.yaxis;
+  const xAxis = layout && layout.xaxis;
+  const svg = plot.querySelector(".main-svg");
+  if (!svg || !yAxis || !xAxis) return;
+  const key = param.key;
+  plot.querySelectorAll(`[data-frost="${key}"]`).forEach((node) => node.remove());
+  plot.querySelectorAll(`[data-frost-defs="${key}"]`).forEach((node) => node.remove());
+  if (!active || !yAxis.range || !yAxis._length || !xAxis._length) return;
+  const [low, high] = yAxis.range;
+  if (!(high > low) || !(low < frost.at) || !(high > frost.at)) return;
+  const left = xAxis._offset;
+  const width = xAxis._length;
+  const top = yAxis._offset + ((high - frost.at) / (high - low)) * yAxis._length;
+  const height = yAxis._offset + yAxis._length - top;
+  if (!(width > 0) || height < 6) return;
+  const layer = plot.querySelector(".bglayer");
+  if (!layer) return;
+
+  const patternId = `frost-crystals-${key}`;
+  const maskId = `frost-mask-${key}`;
+  const gradientId = `frost-fade-${key}`;
+  const defs = svgEl("defs", { "data-frost-defs": key });
+  defs.appendChild(frostPattern(patternId, frost.color));
+  const gradient = svgEl("linearGradient", {
+    id: gradientId,
+    x1: 0,
+    y1: 0,
+    x2: 0,
+    y2: 1,
+  });
+  [
+    { offset: 0, opacity: 1 },
+    { offset: 0.55, opacity: 0.7 },
+    { offset: 1, opacity: 0.18 },
+  ].forEach((stop) => {
+    gradient.appendChild(
+      svgEl("stop", { offset: stop.offset, "stop-color": "#fff", "stop-opacity": stop.opacity })
+    );
+  });
+  const mask = svgEl("mask", {
+    id: maskId,
+    maskUnits: "userSpaceOnUse",
+    x: left,
+    y: top,
+    width,
+    height,
+  });
+  mask.appendChild(
+    svgEl("rect", { x: left, y: top, width, height, fill: `url(#${gradientId})` })
+  );
+  defs.append(gradient, mask);
+  svg.appendChild(defs);
+
+  const group = svgEl("g", {
+    "data-frost": key,
+    "pointer-events": "none",
+    "aria-hidden": "true",
+  });
+  group.appendChild(
+    svgEl("rect", {
+      x: left,
+      y: top,
+      width,
+      height,
+      fill: hexToRgba(frost.color, 0.05),
+      stroke: "none",
+    })
+  );
+  group.appendChild(
+    svgEl("rect", {
+      x: left,
+      y: top,
+      width,
+      height,
+      fill: `url(#${patternId})`,
+      mask: `url(#${maskId})`,
+      stroke: "none",
+    })
+  );
+  layer.appendChild(group);
 }
 
 function localMs(value) {
@@ -1938,6 +2096,22 @@ function renderChart(param, block, series) {
       param.bounds
     );
   }
+  let frostActive = false;
+  if (param.frost && yRange) {
+    const hourlyExtent = seriesExtent(series);
+    const minima = [];
+    if (hourlyExtent) minima.push(hourlyExtent[0]);
+    if (extraExtent && extraExtent[0] !== null && extraExtent[0] !== undefined) {
+      minima.push(extraExtent[0]);
+    }
+    const dataMin = minima.length ? Math.min(...minima) : null;
+    frostActive = dataMin !== null && dataMin < param.frost.at;
+    if (frostActive) {
+      const span = yRange[1] - yRange[0] || 1;
+      const floor = param.frost.at - Math.max(1.5, span * 0.08);
+      yRange = [Math.min(yRange[0], floor), yRange[1]];
+    }
+  }
 
   let y2Range = null;
   if (secondaryOverlay && secondaryOverlay.overlay.axisMax === undefined) {
@@ -2112,9 +2286,11 @@ function renderChart(param, block, series) {
       }
     });
     paintAnnotationsUnderBoxes(plot);
+    if (param.frost) frostField(plot, param, frostActive);
     requestAnimationFrame(() => separateAnnotationBoxes(plot));
     plot.on("plotly_afterplot", () => {
       paintAnnotationsUnderBoxes(plot);
+      if (param.frost) frostField(plot, param, frostActive);
       if (plot.__spreadBusy) {
         plot.__spreadBusy = false;
         return;
