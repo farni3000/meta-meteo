@@ -692,36 +692,65 @@ function snowflakePath(radius) {
   return parts.join("");
 }
 
+function frostRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Deterministic pseudo-random crystals: the field is rebuilt on every
+// plotly_afterplot, so a seeded generator keeps the pattern stable on
+// zoom/pan while size, position and brightness vary in both axes.
 function frostPattern(id, color, x, y) {
+  const width = 288;
+  const height = 256;
   const pattern = svgEl("pattern", {
     id,
     x,
     y,
-    width: 150,
-    height: 120,
+    width,
+    height,
     patternUnits: "userSpaceOnUse",
   });
-  [
-    { x: 24, y: 12, radius: 7, rotate: 14, opacity: 0.55 },
-    { x: 104, y: 50, radius: 4.2, rotate: -12, opacity: 0.3 },
-    { x: 56, y: 92, radius: 6, rotate: 26, opacity: 0.45 },
-    { x: 134, y: 110, radius: 4.8, rotate: -22, opacity: 0.34 },
-  ].forEach((crystal) => {
-    const group = svgEl("g", {
-      transform: `translate(${crystal.x} ${crystal.y}) rotate(${crystal.rotate})`,
-    });
-    group.appendChild(
-      svgEl("path", {
-        d: snowflakePath(crystal.radius),
-        fill: "none",
-        stroke: color,
-        "stroke-width": 0.9,
-        "stroke-linecap": "round",
-        "stroke-opacity": crystal.opacity,
-      })
-    );
-    pattern.appendChild(group);
-  });
+  const random = frostRandom(0x51ed270b);
+  const columns = 5;
+  const rows = 4;
+  const cellWidth = width / columns;
+  const cellHeight = height / rows;
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const radius = 4 + random() * 4;
+      const margin = radius * 1.2;
+      const cx = column * cellWidth + cellWidth / 2 + (random() * 2 - 1) * 16;
+      const cy = row * cellHeight + cellHeight / 2 + (random() * 2 - 1) * 18;
+      const crystal = {
+        x: Math.min(Math.max(cx, margin), width - margin),
+        y: Math.min(Math.max(cy, margin), height - margin),
+        rotate: (random() * 2 - 1) * 30,
+        opacity: 0.28 + random() * 0.36,
+      };
+      const group = svgEl("g", {
+        transform: `translate(${crystal.x.toFixed(2)} ${crystal.y.toFixed(2)})` +
+          ` rotate(${crystal.rotate.toFixed(1)})`,
+      });
+      group.appendChild(
+        svgEl("path", {
+          d: snowflakePath(radius),
+          fill: "none",
+          stroke: color,
+          "stroke-width": (0.75 + ((radius - 4) / 4) * 0.2).toFixed(2),
+          "stroke-linecap": "round",
+          "stroke-opacity": crystal.opacity.toFixed(2),
+        })
+      );
+      pattern.appendChild(group);
+    }
+  }
   return pattern;
 }
 

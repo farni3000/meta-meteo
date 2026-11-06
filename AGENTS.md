@@ -95,7 +95,9 @@ as an error band.
   y range. The pattern is in `userSpaceOnUse` with its tile origin (`x`/`y`) at
   the frost corner (plot left × 0 °C), so crystal size and density stay constant
   in screen pixels while nothing is clipped at the zero line or the left edge
-  (only right/bottom).
+  (only right/bottom). The crystals come from a seeded PRNG (`frostRandom`) in a
+  jittered 5 × 4 grid with random radius, rotation and opacity, so the pattern is
+  stable across rebuilds but varies in both axes.
 - **Feels-like overlay:** `apparent_temperature` is a dashed overlay on the
   temperature chart, marked `hourlyOnly: true`; `renderChart` skips it in the
   daily view. It has no uncertainty band. Legend order is set via `legendrank`:
