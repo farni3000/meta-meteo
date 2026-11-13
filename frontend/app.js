@@ -42,6 +42,7 @@ const CHARTS = [
     ],
     annotations: { type: "sum", pinToTop: true },
     dailyAnnotations: { min: true, max: true, sum: true, pinSum: true },
+    current: true,
   },
   {
     key: "wind_speed_10m",
@@ -90,6 +91,7 @@ const CHARTS = [
     zero: true,
     annotations: { type: "max", dynamicArrow: true },
     dailyAnnotations: { max: true },
+    current: true,
   },
   {
     key: "pressure_msl",
@@ -99,6 +101,8 @@ const CHARTS = [
     zero: false,
     annotations: { type: "max", dynamicArrow: true },
     dailyAnnotations: { min: true, max: true },
+    current: true,
+    currentDigits: 0,
     bands: [
       { from: 900, to: 1000, labelKey: "band.low", color: "#60a5fa" },
       { from: 1000, to: 1013, labelKey: "band.slightlyBelow", color: "#22d3ee" },
@@ -135,17 +139,6 @@ function buildPanelParams() {
 const PANEL_PARAMS = buildPanelParams();
 
 const HOURLY_WINDOW_DAYS = 3;
-
-// Presentation of the current-value indicator: "header" (chip next to the
-// chart title), "plot" (Plotly annotation in the top-left corner of the plot),
-// "both" or "none". `?nowstyle=…` overrides it for quick comparison.
-const NOW_STYLE = "header";
-const nowStyle =
-  (typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("nowstyle")) ||
-  NOW_STYLE;
-const showNowHeader = nowStyle === "header" || nowStyle === "both";
-const showNowPlot = nowStyle === "plot" || nowStyle === "both";
 
 const DISPLAY_NAMES = {
   icon_seamless: "DWD ICON",
@@ -934,33 +927,6 @@ function currentValueText(param, series, timestamps) {
   };
 }
 
-function currentAnnotation(param, series, timestamps) {
-  if (!showNowPlot || !param.current) return null;
-  const current = currentValueText(param, series, timestamps);
-  if (!current) return null;
-  return {
-    xref: "paper",
-    yref: "paper",
-    x: 0.01,
-    y: param.direction ? 0.85 : 0.98,
-    xanchor: "left",
-    yanchor: "top",
-    text: t("chart.nowValue", { value: current.text }),
-    showarrow: false,
-    align: "left",
-    bgcolor: "rgba(34, 46, 64, 0.92)",
-    bordercolor: hexToRgba(param.color, 0.8),
-    borderwidth: 1,
-    borderpad: 3,
-    font: { size: 10, color: param.color },
-    hovertext: t("chart.nowTitle", {
-      hour: current.now.hour,
-      models: current.now.models,
-    }),
-    captureevents: true,
-  };
-}
-
 function hourlyTicks(start, end) {
   const startMs = wallClockMs(start);
   const endMs = wallClockMs(end);
@@ -1390,7 +1356,7 @@ function paintAnnotationsUnderBoxes(plot) {
   });
 }
 
-function separateAnnotationBoxes(plot, protectIndex = -1) {
+function separateAnnotationBoxes(plot) {
   const layout = plot._fullLayout;
   if (!layout || !layout.annotations || layout.annotations.length < 2) return;
   const size = layout._size;
@@ -1410,7 +1376,6 @@ function separateAnnotationBoxes(plot, protectIndex = -1) {
     if (!box.width || !box.height) return;
     boxes.push({
       ann,
-      index,
       left: box.left,
       right: box.right,
       top: box.top,
@@ -1429,23 +1394,17 @@ function separateAnnotationBoxes(plot, protectIndex = -1) {
       if (a.bottom <= b.top || b.bottom <= a.top) continue;
       const overlap = a.right + gap - b.left;
       if (overlap <= 0) continue;
-      const aProtected = a.index === protectIndex;
-      const bProtected = b.index === protectIndex;
-      if (aProtected && bProtected) continue;
       const bRoom = plotRight - b.right;
       const aRoom = a.left - plotLeft;
       const bKey = b.ann.showarrow === false ? "xshift" : "ax";
       const aKey = a.ann.showarrow === false ? "xshift" : "ax";
-      const moveB =
-        aProtected || (!bProtected && (bRoom >= overlap || bRoom >= aRoom));
-      if (moveB) {
+      if (bRoom >= overlap || bRoom >= aRoom) {
         const dx = Math.min(overlap, bRoom);
         if (dx < 1) continue;
         b.ann[bKey] = Math.round((b.ann[bKey] || 0) + dx);
         b.left += dx;
         b.right += dx;
       } else {
-        if (bProtected) continue;
         const dx = Math.min(overlap, aRoom);
         if (dx < 1) continue;
         a.ann[aKey] = Math.round((a.ann[aKey] || 0) - dx);
@@ -1487,9 +1446,6 @@ function rebuildAnnotations(entry, range) {
   const ctx = chartXContext(range, entry.timestamps);
   const context = annotationContext(entry, range);
   const annotations = [];
-  if (entry.currentAnnotation) {
-    annotations.push(entry.currentAnnotation);
-  }
   if (entry.param.bands && entry.yRange) {
     annotations.push(...bandAnnotations(entry.param.bands, entry.yRange));
   }
@@ -1990,7 +1946,7 @@ function renderChart(param, block, series) {
   title.className = "chart-title";
   title.textContent = t(param.titleKey || param.labelKey);
   head.appendChild(title);
-  if (showNowHeader && param.current) {
+  if (param.current) {
     const current = currentValueText(param, series, block.timestamps);
     if (current) {
       const chip = document.createElement("span");
@@ -2333,10 +2289,6 @@ function renderChart(param, block, series) {
     layout.yaxis.range = yRange;
   }
   const annotations = [];
-  const nowAnnotation = currentAnnotation(param, series, timestamps);
-  if (nowAnnotation) {
-    annotations.push(nowAnnotation);
-  }
   if (param.bands && yRange) {
     annotations.push(...bandAnnotations(param.bands, yRange));
   }
@@ -2401,7 +2353,6 @@ function renderChart(param, block, series) {
       endBound: xRange && xRange[1],
       points,
       annotationOverlays,
-      currentAnnotation: nowAnnotation,
       yRange,
       timestamps,
     };
@@ -2433,8 +2384,7 @@ function renderChart(param, block, series) {
     });
     paintAnnotationsUnderBoxes(plot);
     if (param.frost) frostField(plot, param, frostActive);
-    const protectIndex = nowAnnotation ? 0 : -1;
-    requestAnimationFrame(() => separateAnnotationBoxes(plot, protectIndex));
+    requestAnimationFrame(() => separateAnnotationBoxes(plot));
     plot.on("plotly_afterplot", () => {
       paintAnnotationsUnderBoxes(plot);
       if (param.frost) frostField(plot, param, frostActive);
@@ -2442,7 +2392,7 @@ function renderChart(param, block, series) {
         plot.__spreadBusy = false;
         return;
       }
-      requestAnimationFrame(() => separateAnnotationBoxes(plot, protectIndex));
+      requestAnimationFrame(() => separateAnnotationBoxes(plot));
     });
   });
 

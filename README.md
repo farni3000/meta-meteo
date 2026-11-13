@@ -81,13 +81,11 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   from now (zoom out for all 7 days). A trailing calendar day is only included
   if at least 3 hours of it fall inside the window, otherwise the window ends at
   its midnight.
-- Current value: temperature, wind speed and precipitation probability show the
-  model mean of the hour containing the request time as a small chip (hourly
-  view only, tooltip with hour and model count; 0 decimals for wind and
-  probability). The presentation can be compared via `?nowstyle=`: `header`
-  (chip next to the chart title, default), `plot` (annotation in the top-left
-  corner of the plot), `both` or `none`. In the plot variant the chip sits below
-  the wind-direction arrows and is excluded from the annotation box spreading.
+- Current value: every chart shows the model mean of the hour containing the
+  request time as a small chip next to the chart title (hourly view only,
+  tooltip with hour and model count). Decimals via `currentDigits` (0 for wind,
+  precipitation probability and air pressure); the sunshine chip is the sunshine
+  duration of the current hour, the precipitation chart shows the probability.
 - Highlights directly in the chart. In the hourly view, temperature, wind, UV
   index, precipitation probability and air pressure show the daily maximum per
   day, precipitation amount and sunshine hours the daily total; the values are

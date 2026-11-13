@@ -140,17 +140,15 @@ as an error band.
   (`hourlyWindowEnd`, `HOURLY_WINDOW_DAYS`); a trailing calendar day with less
   than 3 h inside the window is dropped, and `dailyHighlights` uses only the
   visible part of that last day (analogous to the first day's `remaining <= 3`).
-- **Current-value chip:** `current: true` on a `CHARTS` entry (temperature, wind,
-  precipitation probability) shows the model mean of the hour containing
-  `state.data.now` (hourly only; `currentDigits` sets the decimals).
-  `currentPoint()` derives it; both presentations share `currentValueText()`
-  and i18n `chart.now`/`chart.nowValue`/`chart.nowTitle`. Switch via
-  `NOW_STYLE` or `?nowstyle=header|plot|both|none`: `header` renders a DOM chip
-  in `.chart-head`, `plot` a Plotly annotation in paper coords (top-left, below
-  the direction arrows at `y: 0.85` when `direction` is set). The plot variant
-  must be re-added in `rebuildAnnotations()` (relayout replaces all annotations)
-  and is index 0, which `separateAnnotationBoxes(plot, protectIndex)` keeps
-  unmoved.
+- **Current-value chip:** `current: true` on a `CHARTS` entry (set for every
+  chart) shows the model mean of the hour containing `state.data.now` as a DOM
+  chip in `.chart-head` between title and info icon (hourly only). Decimals via
+  `currentDigits` (default 1; 0 for wind, precipitation probability and air
+  pressure). `currentPoint()` finds the hour, `currentValueText()` formats it;
+  texts are `chart.now`/`chart.nowTitle`, the tooltip carries hour and model
+  count. On narrow screens (≤ 400 px) the word "now" is hidden, the value stays.
+  The sunshine chip is the sunshine duration of the current hour, the
+  precipitation chart uses the probability (primary series).
 - **Refresh:** the refresh button calls `selectLocation(state.selected,
   { refresh: true })`; `refresh=1` on `/api/forecast` skips the TTL cache
   lookup, fetches fresh model data and then overwrites the cache entry.
