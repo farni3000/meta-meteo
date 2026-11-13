@@ -309,6 +309,29 @@
       padding: 10px 12px 0;
     }
     .chart-title { font-size: 0.95rem; font-weight: 600; }
+    .chart-now {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-left: 2px;
+      padding: 1px 8px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1.35;
+      white-space: nowrap;
+    }
+    .chart-now-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      flex: none;
+    }
+    @media (max-width: 400px) {
+      .chart-now-label { display: none; }
+    }
     .info {
       display: inline-flex;
       align-items: center;
