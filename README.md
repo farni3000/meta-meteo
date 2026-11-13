@@ -252,11 +252,12 @@ The frontend is served by the backend as a static file, so no separate web serve
 and no CORS configuration is needed.
 
 Alternatively use the start script (creates the venv if needed, starts the server
-and opens the browser):
+and opens the browser as soon as it responds):
 
 ```bash
-./start.command
-# or by double-clicking in Finder
+./start.sh
+# ohne Browser-Tab:
+./start.sh --no-browser
 ```
 
 The port can be changed via the environment variable `META_METEO_PORT` (default
