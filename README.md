@@ -260,9 +260,9 @@ Alternatively use the start script (creates the venv if needed, starts the serve
 and opens the browser as soon as it responds):
 
 ```bash
-./start.sh
+./run.sh
 # ohne Browser-Tab:
-./start.sh --no-browser
+./run.sh --no-browser
 ```
 
 The port can be changed via the environment variable `META_METEO_PORT` (default

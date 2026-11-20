@@ -283,5 +283,5 @@ uvicorn backend.main:app --reload
 # http://localhost:8000
 ```
 
-Alternatively `./start.sh` (creates the venv, starts the server, opens the
+Alternatively `./run.sh` (creates the venv, starts the server, opens the
 browser; `--no-browser` suppresses the tab).

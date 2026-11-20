@@ -29,7 +29,7 @@ fi
 
 if lsof -ti "tcp:${PORT}" -sTCP:LISTEN >/dev/null 2>&1; then
   echo "Port ${PORT} ist bereits belegt – MetaMeteo läuft möglicherweise schon." >&2
-  echo "  Anderen Port wählen: META_METEO_PORT=8010 ./start.sh" >&2
+  echo "  Anderen Port wählen: META_METEO_PORT=8010 ./run.sh" >&2
   exit 1
 fi
 
