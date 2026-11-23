@@ -194,9 +194,10 @@ as an error band.
   request (`changeLanguage` → `render()`). Language-specific also `LOCALES`,
   `CARDINALS`, `WEEKDAYS`, `TICK_FORMATS`, `shortDate()`, `gemName()`.
 - **X-axis:** in hourly mode `hourlyTicks(range)` builds its own
-  `tickvals`/`ticktext` (weekday from `I18n.weekdays()` at midnight, otherwise
-  `HH:00`); step size from `[1,2,3,6,12,24]` such that ≤ 8 ticks result, start via
-  `wallClockMs`/`isoLocal`. On zoom/pan, reset in the `plotly_relayout` handler
+  `tickvals`/`ticktext` (first line `HH:00`, second line the weekday from
+  `I18n.weekdays()`); step size from `[1,2,3,6,12,24]` such that ≤ 8 ticks result,
+  start via `wallClockMs`/`isoLocal`. Labels are horizontal (`tickangle: 0`) in
+  both modes. On zoom/pan, reset in the `plotly_relayout` handler
   via `hourlyTickLayout()` (together with the annotations in one
   `Plotly.relayout`). Daily mode: `tickmode: "array"` with all block timestamps
   centred in the day (`<day>T12:00`, `dailyPlotTimestamp`) as `tickvals` and

@@ -212,12 +212,13 @@ without locale registration. For four-digit values, Spanish and Italian do not
 group, in line with the standard (`1013,2` instead of `1.013,2`); this is CLDR
 behaviour and deliberately left as is.
 
-The x-axis labels the charts in the correct language: in hourly mode the weekday
-abbreviation appears at day boundaries (midnight) (e.g. `Mo`, `Thu`, `Jeu`,
-`Jue`, `Gio`), the time in between; in daily mode every day is labelled with its
-weekday and, on a second line, the date formatted for the active locale (e.g.
-`Mo` / `23.11.` in German, `Mon` / `23/11` in the other languages). Tick
-positions are chosen to match the visible span and recalculated on zoom/pan.
+The x-axis labels the charts in the correct language: in hourly mode every tick
+shows the time on the first line and the weekday abbreviation on a second line
+(e.g. `14:00` / `Mo`, `Thu`, `Jeu`, `Jue`, `Gio`); in daily mode every day is
+labelled with its weekday and, on a second line, the date formatted for the
+active locale (e.g. `Mo` / `23.11.` in German, `Mon` / `23/11` in the other
+languages). Labels are horizontal in both modes. Tick positions are chosen to
+match the visible span and recalculated on zoom/pan.
 
 The hover tooltip shows the same weekday abbreviation instead of the date: in
 hourly mode together with the time (e.g. `Thu 14:00`), in daily mode as the sole

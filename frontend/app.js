@@ -944,13 +944,8 @@ function hourlyTicks(start, end) {
   const ticktext = [];
   while (tickMs <= endMs) {
     const iso = isoLocal(tickMs);
-    const hour = Number(iso.slice(11, 13));
     tickvals.push(iso);
-    if (hour === 0) {
-      ticktext.push(weekdayName(iso));
-    } else {
-      ticktext.push(`${iso.slice(11, 13)}:00`);
-    }
+    ticktext.push(`${iso.slice(11, 13)}:00<br>${weekdayName(iso)}`);
     tickMs += step * 3600000;
   }
   return { tickvals, ticktext };
@@ -2252,7 +2247,7 @@ function renderChart(param, block, series) {
       gridcolor: "#334155",
       type: "date",
       automargin: true,
-      tickangle: state.mode === "hourly" ? -45 : 0,
+      tickangle: 0,
       minallowed: bound || undefined,
       maxallowed: timestamps.length
         ? dailyEnd || timestamps[timestamps.length - 1]
