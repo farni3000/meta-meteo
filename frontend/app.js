@@ -2275,7 +2275,9 @@ function renderChart(param, block, series) {
   } else if (state.mode === "daily") {
     layout.xaxis.tickmode = "array";
     layout.xaxis.tickvals = xTimestamps;
-    layout.xaxis.ticktext = timestamps.map(weekdayName);
+    layout.xaxis.ticktext = timestamps.map(
+      (timestamp) => `${weekdayName(timestamp)}<br>${I18n.shortDate(timestamp)}`
+    );
   } else {
     layout.xaxis.nticks = 7;
     layout.xaxis.tickformat = I18n.tickFormat("hourly");

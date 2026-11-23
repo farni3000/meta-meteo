@@ -192,7 +192,7 @@ as an error band.
   Language: default from `navigator.languages`, persisted in
   `localStorage["metameteo.lang"]`; switching translates live without a new
   request (`changeLanguage` → `render()`). Language-specific also `LOCALES`,
-  `CARDINALS`, `WEEKDAYS`, `TICK_FORMATS`, `gemName()`.
+  `CARDINALS`, `WEEKDAYS`, `TICK_FORMATS`, `shortDate()`, `gemName()`.
 - **X-axis:** in hourly mode `hourlyTicks(range)` builds its own
   `tickvals`/`ticktext` (weekday from `I18n.weekdays()` at midnight, otherwise
   `HH:00`); step size from `[1,2,3,6,12,24]` such that ≤ 8 ticks result, start via
@@ -200,7 +200,8 @@ as an error band.
   via `hourlyTickLayout()` (together with the annotations in one
   `Plotly.relayout`). Daily mode: `tickmode: "array"` with all block timestamps
   centred in the day (`<day>T12:00`, `dailyPlotTimestamp`) as `tickvals` and
-  `ticktext` from `weekdayName()` so that no day is omitted; the daily **data
+  `ticktext` from `weekdayName()` plus `<br>` and the locale date from
+  `I18n.shortDate()` (e.g. `Mo<br>23.11.`) so that no day is omitted; the daily **data
   points/traces** use the same centred timestamps with a small marker per day, so
   the axis shows exactly one x gridline per day, while the raw timestamps stay in
   use for day grouping and the axis range. The alternating day shading

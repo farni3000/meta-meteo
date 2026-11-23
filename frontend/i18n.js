@@ -602,6 +602,27 @@ const I18n = (() => {
     return WEEKDAYS[currentLang] || WEEKDAYS[DEFAULT_LANG];
   }
 
+  const SHORT_DATE_FORMATTERS = {};
+
+  function shortDate(value) {
+    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return String(value);
+    const ms = Date.UTC(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3])
+    );
+    const loc = locale();
+    if (!SHORT_DATE_FORMATTERS[loc]) {
+      SHORT_DATE_FORMATTERS[loc] = new Intl.DateTimeFormat(loc, {
+        day: "2-digit",
+        month: "2-digit",
+        timeZone: "UTC",
+      });
+    }
+    return SHORT_DATE_FORMATTERS[loc].format(ms);
+  }
+
   function tickFormat(mode) {
     const formats = TICK_FORMATS[currentLang] || TICK_FORMATS[DEFAULT_LANG];
     return mode === "daily" ? formats.daily : formats.hourly;
@@ -622,6 +643,7 @@ const I18n = (() => {
     locale,
     cardinals,
     weekdays,
+    shortDate,
     tickFormat,
     gemName,
     supported: SUPPORTED,
