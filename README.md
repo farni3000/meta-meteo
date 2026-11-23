@@ -1,6 +1,6 @@
 # MetaMeteo
 
-Local web app (backend + browser frontend) that fetches a 9-day forecast for a
+Local web app (backend + browser frontend) that fetches an 8-day forecast for a
 location from several independent weather models, computes the mean and spread
 (standard deviation) between the models for each quantity (temperature, wind,
 wind direction, UV index, precipitation probability, precipitation amount,
@@ -78,7 +78,7 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   −1.5 °C (or 8 % of the span) so the zone is recognisable even just below
   freezing. Locations without frost are unchanged.
 - "hourly / daily" toggle; hourly starts the view with a sliding 3-day window
-  from now (zoom out for all 9 days). A trailing calendar day is only included
+  from now (zoom out for all 8 days). A trailing calendar day is only included
   if at least 3 hours of it fall inside the window, otherwise the window ends at
   its midnight.
 - Current value: every chart shows the model mean of the hour containing the
@@ -303,7 +303,7 @@ Returns a list of possible places (`name`, `country`, `country_code`, `admin1`,
 | Parameter | Description |
 | --- | --- |
 | `lat`, `lon` | Coordinates (required) |
-| `days` | Forecast days, 1–16 (default 9) |
+| `days` | Forecast days, 1–16 (default 8) |
 | `models` | Comma-separated model list (default from config) |
 | `name`, `country`, `country_code`, `admin1`, `tz` | Optional metadata for display and for picking the warning source |
 | `lang` | UI language (affects the warning texts): `de`, `en`, `fr`, `es`, `it` (default `de`) |

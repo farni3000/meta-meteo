@@ -139,7 +139,7 @@ function buildPanelParams() {
 const PANEL_PARAMS = buildPanelParams();
 
 const HOURLY_WINDOW_DAYS = 3;
-const FORECAST_DAYS = 9;
+const FORECAST_DAYS = 8;
 
 const DISPLAY_NAMES = {
   icon_seamless: "DWD ICON",

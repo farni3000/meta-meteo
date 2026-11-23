@@ -7,7 +7,7 @@ questions.
 ## What this is
 
 **MetaMeteo** – web app (FastAPI backend + static browser frontend) that
-fetches a 9-day forecast for a location from several Open-Meteo weather models,
+fetches an 8-day forecast for a location from several Open-Meteo weather models,
 aggregates mean + spread per parameter and renders it as charts with Plotly. No
 API key for the forecast, no scheduler. The only LLM call is the optional
 smalltalk button (`POST /api/smalltalk`, DeepSeek, `DEEPSEEK_API_KEY` from
