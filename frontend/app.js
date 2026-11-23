@@ -139,6 +139,7 @@ function buildPanelParams() {
 const PANEL_PARAMS = buildPanelParams();
 
 const HOURLY_WINDOW_DAYS = 3;
+const FORECAST_DAYS = 9;
 
 const DISPLAY_NAMES = {
   icon_seamless: "DWD ICON",
@@ -535,7 +536,7 @@ async function selectLocation(location, options = {}) {
     const params = new URLSearchParams({
       lat: location.latitude,
       lon: location.longitude,
-      days: 7,
+      days: FORECAST_DAYS,
       lang: I18n.getLang(),
     });
     if (options.refresh) {
