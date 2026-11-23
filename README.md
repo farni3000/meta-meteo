@@ -176,14 +176,16 @@ averaged as a vector mean (vector sum) instead of an arithmetic mean.
   generated text follows the selected interface language and can be regenerated
   ("Again"). Requires a `DEEPSEEK_API_KEY` in `.env`; the key never reaches the
   browser.
-- Weather warnings above the charts: fetched in parallel with the forecast and
-  rendered as a severity-coloured banner (CAP levels minor/moderate/severe/
+- Weather warnings, split by severity: fetched in parallel with the forecast and
+  rendered as severity-coloured banners (CAP levels minor/moderate/severe/
   extreme → yellow/orange/red/violet) with an expandable description and
-  instruction. The source depends on the country of the location: DWD/Bright Sky
-  for Germany (point-accurate, German/English text) and NWS (`api.weather.gov`)
-  for the US. Other countries have no warning source and show no banner. Without
-  an active warning the banner stays hidden. A failed warning request never fails
-  the forecast; it simply yields no alerts.
+  instruction. Severe and extreme warnings (red/violet) stay above the charts;
+  minor and moderate ones (yellow/orange) appear below the charts, just before
+  the "Models used per parameter" panel. The source depends on the country of
+  the location: DWD/Bright Sky for Germany (point-accurate, German/English text)
+  and NWS (`api.weather.gov`) for the US. Other countries have no warning
+  source and show no banner. Without an active warning the banner stays hidden.
+  A failed warning request never fails the forecast; it simply yields no alerts.
 - Short-lived in-memory cache (TTL 10 minutes), key = coordinates + model
   selection + country code + UI language.
 - No scheduler, no scraping, no API key for the forecast itself. The forecast

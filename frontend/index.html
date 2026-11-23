@@ -248,6 +248,7 @@
     .star-btn:hover { border-color: var(--accent); color: var(--accent); }
     .star-btn.on { color: #fbbf24; border-color: #fbbf24; }
     .alerts { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .alerts-below { margin-top: 16px; }
     .alerts[hidden] { display: none; }
     .alerts-title { font-size: 0.85rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
     .alerts-list { display: flex; flex-direction: column; gap: 8px; }
@@ -549,6 +550,8 @@
     <section id="alerts" class="alerts" hidden></section>
 
     <div class="charts" id="charts"></div>
+
+    <section id="alerts-secondary" class="alerts alerts-below" hidden></section>
 
     <details class="panel" id="models-panel" hidden>
       <summary data-i18n="models.title">Genutzte Modelle je Parameter</summary>

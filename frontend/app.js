@@ -176,6 +176,7 @@ const statusEl = document.getElementById("status");
 const windowHint = document.getElementById("window-hint");
 const locationMeta = document.getElementById("location-meta");
 const alertsEl = document.getElementById("alerts");
+const alertsSecondaryEl = document.getElementById("alerts-secondary");
 const chartsEl = document.getElementById("charts");
 const modelsPanel = document.getElementById("models-panel");
 const modelsSummary = document.getElementById("models-summary");
@@ -2590,21 +2591,28 @@ function renderAlertCard(alert) {
   return card;
 }
 
-function renderAlerts() {
-  const alerts = (state.data && state.data.alerts) || [];
-  alertsEl.innerHTML = "";
-  alertsEl.hidden = alerts.length === 0;
+function fillAlerts(container, alerts) {
+  container.innerHTML = "";
+  container.hidden = alerts.length === 0;
   if (!alerts.length) return;
 
   const title = document.createElement("div");
   title.className = "alerts-title";
   title.textContent = t("alerts.title");
-  alertsEl.appendChild(title);
+  container.appendChild(title);
 
   const list = document.createElement("div");
   list.className = "alerts-list";
   alerts.forEach((alert) => list.appendChild(renderAlertCard(alert)));
-  alertsEl.appendChild(list);
+  container.appendChild(list);
+}
+
+function renderAlerts() {
+  const alerts = (state.data && state.data.alerts) || [];
+  const severe = alerts.filter((alert) => alert.severity_level >= 3);
+  const minor = alerts.filter((alert) => !(alert.severity_level >= 3));
+  fillAlerts(alertsEl, severe);
+  fillAlerts(alertsSecondaryEl, minor);
 }
 
 function renderLocationMeta() {

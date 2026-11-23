@@ -73,8 +73,11 @@ as an error band.
 - **Warnings:** `alerts.py` picks the source by `country_code` (DE → Bright
   Sky, US → NWS) and normalises to `WeatherAlert` (CAP `severity` plus
   `severity_level` 1–4). Non-fatal (`[]` on error/unsupported country). The
-  banner is rendered by `renderAlerts()` above the charts, texts localised via
-  `alerts.*` keys. `country_code` and `lang` are part of the forecast cache key.
+  banner is rendered by `renderAlerts()`, which splits by `severity_level`:
+  severe/extreme (≥ 3) above the charts, minor/moderate (≤ 2) below the charts
+  before the models panel (two containers `#alerts`/`#alerts-secondary`, shared
+  `fillAlerts()`), texts localised via `alerts.*` keys. `country_code` and `lang`
+  are part of the forecast cache key.
 - **Missing values** are excluded, never treated as 0; if all are missing,
   `mean`/`std` are `null`.
 - **Frontend console/DOM changes** without a build step: `frontend/app.js`
